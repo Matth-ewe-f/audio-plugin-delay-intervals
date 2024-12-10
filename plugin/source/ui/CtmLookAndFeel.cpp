@@ -2,22 +2,38 @@
 
 CtmLookAndFeel::CtmLookAndFeel()
 {
-    // override default colors
-    setColour(juce::ResizableWindow::backgroundColourId, normalBgColor);
-    juce::Colour trans = juce::Colour::fromRGBA(255, 255, 255, 0);
-    setColour(juce::TextEditor::backgroundColourId, trans);
-    setColour(juce::TextEditor::outlineColourId, trans);
-    setColour(juce::TextEditor::focusedOutlineColourId, trans);
-    setColour(juce::Slider::backgroundColourId, rotaryColor);
     // add custom colors
-    setColour(CtmColourIds::normalBgColourId, normalBgColor);
-    setColour(CtmColourIds::darkBgColourId, darkBgColor);
-    setColour(CtmColourIds::brightBgColourId, brightBgColor);
-    setColour(CtmColourIds::darkOutlineColourId, darkOutlineColor);
-    setColour(CtmColourIds::brightOutlineColourId, brightOutlineColor);
-    setColour(CtmColourIds::meterFillColourId, meterFillColor);
-    setColour(CtmColourIds::toggledColourId, toggledColor);
-    setColour(CtmColourIds::untoggledColourId, untoggledColor);
+    setColour(CtmColourIds::normalBgColourId, Colour::fromRGB(44, 54, 60));
+    setColour(CtmColourIds::darkBgColourId, Colour::fromRGB(34, 43, 49));
+    setColour(CtmColourIds::brightBgColourId, Colour::fromRGB(54, 72, 82));
+    setColour(CtmColourIds::darkOutlineColourId, Colour::fromRGB(22, 28, 30));
+    setColour(
+        CtmColourIds::brightOutlineColourId, Colour::fromRGB(200, 200, 200)
+    );
+    setColour(CtmColourIds::meterFillColourId, Colour::fromRGB(236, 142, 10));
+    setColour(CtmColourIds::toggledColourId, Colour::fromRGB(226, 134, 14));
+    setColour(CtmColourIds::untoggledColourId, Colour::fromRGB(150, 150, 150));
+    // override default colors
+    setColour(
+        juce::ResizableWindow::backgroundColourId,
+        findColour(CtmColourIds::normalBgColourId)
+    );
+    setColour(
+        juce::TextEditor::backgroundColourId,
+        Colour::fromRGBA(255, 255, 255, 0)
+    );
+    setColour(
+        juce::TextEditor::outlineColourId, 
+        Colour::fromRGBA(255, 255, 255, 0)
+    );
+    setColour(
+        juce::TextEditor::focusedOutlineColourId,
+        Colour::fromRGBA(255, 255, 255, 0)
+    );
+    setColour(
+        juce::Slider::backgroundColourId,
+        Colour::fromRGB(40, 80, 100)
+    );
 }
 
 juce::Slider::SliderLayout CtmLookAndFeel::getSliderLayout
