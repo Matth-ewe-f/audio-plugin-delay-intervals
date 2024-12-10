@@ -21,7 +21,7 @@ public:
 private:
     // === Internal Layout Constants ==========================================
     const float rotaryOutlineWidth = 4;
-    inline static const Colour darkBgColor { Colour::fromRGB(36, 46, 52) };
+    inline static const Colour darkBgColor { Colour::fromRGB(34, 43, 49) };
     inline static const Colour normalBgColor { Colour::fromRGB(44, 54, 60) };
     inline static const Colour brightBgColor { Colour::fromRGB(54, 72, 82) };
     inline static const Colour darkOutlineColor
