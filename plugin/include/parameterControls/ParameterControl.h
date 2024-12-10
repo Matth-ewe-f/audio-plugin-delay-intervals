@@ -11,6 +11,7 @@ public:
     std::string parameterName;
     CtmSlider slider;
     SliderLabel label;
+    juce::Label title;
     std::unique_ptr<SliderAttachment> attachment;
 
     // === Lifecycle ==========================================================
@@ -24,9 +25,11 @@ public:
     void attachToParameter
     (juce::AudioProcessorValueTreeState*, std::string);
     void setSliderStyle(juce::Slider::SliderStyle);
+    void setTitleText(std::string);
 
 private:
     juce::Rectangle<int> bounds;
+    std::string titleText;
     bool everAttached;
 
 };

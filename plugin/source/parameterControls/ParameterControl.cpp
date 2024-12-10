@@ -2,17 +2,19 @@
 
 // === Lifecycle ==============================================================
 ParameterControl::ParameterControl()
-    : parameterName(""), everAttached(false)
+    : parameterName(""), titleText(""), everAttached(false)
 {
     bounds = juce::Rectangle<int>(0, 0, 0, 0);
     setSliderStyle(juce::Slider::RotaryVerticalDrag);
     slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     label.listenTo(&slider);
-    juce::FontOptions mainFont(12);
+    juce::FontOptions mainFont(14);
     label.setMainFont(mainFont);
-    juce::FontOptions postfixFont(9);
+    juce::FontOptions postfixFont(11);
     label.setPostfixFont(postfixFont);
     label.updateText(&slider);
+    title.setFont(mainFont);
+    title.setJustificationType(juce::Justification::centred);
 }
 
 ParameterControl::~ParameterControl() { }
@@ -26,8 +28,15 @@ void ParameterControl::setBounds(juce::Rectangle<int> b)
 void ParameterControl::setBounds(int x, int y, int width, int height)
 {
     bounds = juce::Rectangle<int>(x, y, width, height);
-    slider.setBounds(x, y, width, height - 13);
-    label.setBounds(x, y + height - 12, width, 12);
+    bool hasTitle = titleText.compare("") != 0;
+    if (hasTitle)
+        title.setBounds(x, y, width, 16);
+    else
+        title.setBounds(x, y, width, 0);
+    int sliderY = hasTitle ? y + 20 : y;
+    int sliderH = hasTitle ? height - 38 : height - 18;
+    slider.setBounds(x, sliderY, width, sliderH);
+    label.setBounds(x, y + height - 16, width, 16);
 }
 
 void ParameterControl::attachToParameter
@@ -46,4 +55,11 @@ void ParameterControl::attachToParameter
 void ParameterControl::setSliderStyle(juce::Slider::SliderStyle style)
 {
     slider.setSliderStyle(style);
+}
+
+void ParameterControl::setTitleText(std::string s)
+{
+    titleText = s;
+    title.setText(s, juce::NotificationType::sendNotificationAsync);
+    setBounds(bounds);
 }
