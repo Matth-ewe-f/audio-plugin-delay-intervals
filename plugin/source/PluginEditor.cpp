@@ -119,9 +119,10 @@ void PluginEditor::paint(juce::Graphics &g)
     // draw the components of each ui section that need to be drawn
     drawLeftSideGlobals(g);
     drawChannels(g);
+    drawChannelLabels(g);
     drawRightSideGlobals(g);
     // draw lines separating sections
-    g.setColour(juce::Colours::white);
+    g.setColour(findColour(CtmColourIds::brightOutlineColourId));
     int x1 = col1Width;
     int x2 = x1 + col2Width;
     g.drawLine(x1, 0, x1, getHeight());
@@ -280,6 +281,43 @@ void PluginEditor::drawChannels(juce::Graphics& g)
     g.drawText("Subsequent Filter", x2 - 6, y1, fw + 12, 14, centered);
     g.drawText("First Repeat Filter", x1 - 6, y2, fw + 12, 14, centered);
     g.drawText("Subsequent Filter", x2 - 6, y2, fw + 12, 14, centered);
+}
+
+void PluginEditor::drawChannelLabels(juce::Graphics& g)
+{
+    // define dimensions
+    int x = col1Width;
+    int y1 = 0;
+    int y2 = getHeight();
+    int h = 20;
+    int wr = 45;
+    int wl = 37;
+    int edge = 8;
+    // create paths for the label backgrounds
+    juce::Path left;
+    left.startNewSubPath(x, y1);
+    left.lineTo(x + wl, y1);
+    left.lineTo(x + wl - edge, y1 + h);
+    left.lineTo(x, y1 + h);
+    left.closeSubPath();
+    juce::Path right;
+    right.startNewSubPath(x, y2);
+    right.lineTo(x + wr, y2);
+    right.lineTo(x + wr - edge, y2 - h);
+    right.lineTo(x, y2 - h);
+    right.closeSubPath();
+    // draw the label backgrounds
+    g.setColour(findColour(CtmColourIds::brightBgColourId));
+    g.fillPath(left);
+    g.fillPath(right);
+    g.setColour(findColour(CtmColourIds::brightOutlineColourId));
+    g.strokePath(left, juce::PathStrokeType(1));
+    g.strokePath(right, juce::PathStrokeType(1));
+    // draw the text
+    auto center = juce::Justification::centred;
+    g.setColour(juce::Colours::white);
+    g.drawText("Left", x, y1 + 2, wl - (2 * edge / 3), h - 4, center);
+    g.drawText("Right", x, y2 - h + 1, wr - (2 * edge / 3), h - 4, center);
 }
 
 void PluginEditor::drawRightSideGlobals(juce::Graphics& g)

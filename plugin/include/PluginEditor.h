@@ -71,6 +71,7 @@ private:
     // == Drawing Functions ===================================================
     void drawLeftSideGlobals(juce::Graphics&);
     void drawChannels(juce::Graphics&);
+    void drawChannelLabels(juce::Graphics&);
     void drawRightSideGlobals(juce::Graphics&);
 
     // === Helper Functions ===================================================
