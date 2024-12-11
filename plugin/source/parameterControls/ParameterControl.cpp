@@ -33,8 +33,8 @@ void ParameterControl::setBounds(int x, int y, int width, int height)
         title.setBounds(x, y, width, tightText ? 14 : 16);
     else
         title.setBounds(x, y, width, 0);
-    int sliderY = hasTitle ? (tightText ? y + 16 : y + 20) : y;
-    int sliderH = (showLabel ? height - (tightText ? 14 : 18) : height);
+    int sliderY = hasTitle ? (tightText ? y + 17 : y + 20) : y;
+    int sliderH = (showLabel ? height - (tightText ? 15 : 18) : height);
     sliderH -= sliderY - y;
     slider.setBounds(x, sliderY, width, sliderH);
     int labelH = showLabel ? (tightText ? 14 : 16) : 0;

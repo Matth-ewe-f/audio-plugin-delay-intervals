@@ -107,7 +107,11 @@ void PluginEditor::setupChannels()
 
 void PluginEditor::setupRightSideGlobals()
 {
+    falloff.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
+    falloff.setTitleText("Auto-Falloff");
     addParameterControl(&falloff);
+    wetDry.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
+    wetDry.setTitleText("Wet/Dry Mix");
     addParameterControl(&wetDry);
 }
 
@@ -143,7 +147,7 @@ void PluginEditor::layoutLeftSideGlobals()
 {
     int halfHeight = (getHeight() - (paddingY * 2)) / 2;
     int delaySectionH = col1KnobH + col1TogglePadY + col1ToggleH;
-    int delaySectionY = paddingY + (halfHeight - delaySectionH) / 2;
+    int delaySectionY = paddingY + 2 * ((halfHeight - delaySectionH) / 3);
     int x = (col1Width - col1KnobW) / 2;
     delayTime.setBounds(x, delaySectionY, col1KnobW, col1KnobH);
     int toggleX = (col1Width - (col1ToggleW * 2) - col1TogglePadX) / 2;
@@ -151,7 +155,7 @@ void PluginEditor::layoutLeftSideGlobals()
     noTempoSync.setBounds(toggleX, toggleY, col1ToggleW, col1ToggleH);
     int toggleX2 = toggleX + col1ToggleW + col1TogglePadX;
     tempoSync.setBounds(toggleX2, toggleY, col1ToggleW, col1ToggleH);
-    int intervalsY = paddingY + halfHeight + ((halfHeight - col1KnobH) / 2);
+    int intervalsY = paddingY + halfHeight + ((halfHeight - col1KnobH) / 3);
     numIntervals.setBounds(x, intervalsY, col1KnobW, col1KnobH);
 }
 
@@ -213,7 +217,7 @@ void PluginEditor::drawLeftSideGlobals(juce::Graphics& g)
     int x = (col1Width - (col1ToggleW * 2) - col1TogglePadX) / 2;
     int w = (col1ToggleW * 2) + col1TogglePadX;
     int h = col1KnobH + col1TogglePadY + col1ToggleH;
-    int y = paddingY + (((getHeight() - (paddingY * 2)) / 2) - h) / 2;
+    int y = paddingY + 2 * ((((getHeight() - (paddingY * 2)) / 2) - h) / 3);
     g.fillRoundedRectangle(x - 6, y - 6, w + 12, h + 12, 12);
 }
 
