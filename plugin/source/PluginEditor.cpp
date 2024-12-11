@@ -7,7 +7,21 @@ PluginEditor::PluginEditor (PluginProcessor &p)
 {
     juce::ignoreUnused(processorRef);
     setLookAndFeel(&lookAndFeel);
-    // Setup left-side global controls
+    // setup components
+    setupLeftSideGlobals();
+    setupChannels();
+    setupRightSideGlobals();
+    // set size
+    int w = col1Width + col2Width + col3Width;
+    int h = height + (paddingY * 2);
+    setSize(w, h);
+}
+
+PluginEditor::~PluginEditor() { }
+
+// === Initialization Functions ===============================================
+void PluginEditor::setupLeftSideGlobals()
+{
     delayTime.setSliderStyle(juce::Slider::RotaryVerticalDrag);
     delayTime.setTitleText("Delay Time");
     addParameterControl(&delayTime);
@@ -18,7 +32,10 @@ PluginEditor::PluginEditor (PluginProcessor &p)
     numIntervals.setSliderStyle(juce::Slider::RotaryVerticalDrag);
     numIntervals.setTitleText("Intervals");
     addParameterControl(&numIntervals);
-    // Setup channel controls
+}
+
+void PluginEditor::setupChannels()
+{
     addParameterControl(&leftFilterFirstLow);
     addParameterControl(&leftFilterFirstHigh);
     addParameterControl(&leftFilterSecondLow);
@@ -27,38 +44,43 @@ PluginEditor::PluginEditor (PluginProcessor &p)
     addParameterControl(&rightFilterFirstHigh);
     addParameterControl(&rightFilterSecondLow);
     addParameterControl(&rightFilterSecondHigh);
-    // Setup right-side global controls
-    addParameterControl(&falloff);
-    addParameterControl(&wetDry);
-    // Setup size
-    int w = col1Width + col2Width + (col2Margin * 2) + col3Width
-        + (col3Margin * 2);
-    int h = height + (paddingY * 2);
-    setSize(w, h);
+    for (int i = 0;i < leftDelayAmpsLength;i++)
+    {
+        leftDelayAmps[i].setShowLabel(false);
+        leftDelayAmps[i].setSliderStyle(juce::Slider::LinearBarVertical);
+        addParameterControl(&leftDelayAmps[i]);
+    }
+    for (int i = 0;i < rightDelayAmpsLength;i++)
+    {
+        rightDelayAmps[i].setShowLabel(false);
+        rightDelayAmps[i].setSliderStyle(juce::Slider::LinearBarVertical);
+        addParameterControl(&rightDelayAmps[i]);
+    }
 }
 
-PluginEditor::~PluginEditor() { }
+void PluginEditor::setupRightSideGlobals()
+{
+    addParameterControl(&falloff);
+    addParameterControl(&wetDry);
+}
 
 // === Graphics ===============================================================
 void PluginEditor::paint(juce::Graphics &g)
 {
     // draw background
     g.fillAll(findColour(CtmColourIds::normalBgColourId));
+    // draw the components of each ui section that need to be drawn
+    drawLeftSideGlobals(g);
+    drawChannels(g);
+    drawRightSideGlobals(g);
     // draw lines separating sections
     g.setColour(juce::Colours::white);
     int x1 = col1Width;
-    int x2 = x1 + col2Width + (col2Margin * 2);
+    int x2 = x1 + col2Width;
     g.drawLine(x1, 0, x1, getHeight());
     g.drawLine(x2, 0, x2, getHeight());
     g.drawLine(x1, getHeight() / 2, x2, getHeight() / 2);
     g.drawRect(0, 0, getWidth(), getHeight(), 1);
-    // draw background for delay time controls area
-    g.setColour(findColour(CtmColourIds::darkBgColourId));
-    int x = (col1Width - (col1ToggleW * 2) - col1TogglePadX) / 2;
-    int w = (col1ToggleW * 2) + col1TogglePadX;
-    int h = col1KnobH + col1TogglePadY + col1ToggleH;
-    int y = paddingY + (((getHeight() - (paddingY * 2)) / 2) - h) / 2;
-    g.fillRoundedRectangle(x - 6, y - 6, w + 12, h + 12, 12);
 }
 
 void PluginEditor::resized()
@@ -87,12 +109,91 @@ void PluginEditor::layoutLeftSideGlobals()
 
 void PluginEditor::layoutChannels()
 {
-
+    int pad;
+    if (leftDelayAmpsLength == 8)
+        pad = 4;
+    else if (leftDelayAmpsLength == 16)
+        pad = 2;
+    else
+        pad = 1;
+    int leftY = (getHeight() / 2) - delayAmpsAreaHeight + delayAmpsMarginY;
+    int rightY = (getHeight() / 2) + 3;
+    int usableW = col2Width - (2 * col2Margin) - delayAmpsMarginX;
+    int w = (usableW / leftDelayAmpsLength) - pad;
+    int h = delayAmpsAreaHeight - delayAmpsMarginY - 3;
+    for (int i = 0;i < leftDelayAmpsLength;i++)
+    {
+        int startX = col1Width + col2Margin + delayAmpsMarginX;
+        if (leftDelayAmpsLength == 8)
+            startX -= 2;
+        int offsetX = (w + pad) * i;
+        leftDelayAmps[i].setBounds(startX + offsetX, leftY, w, h);
+        rightDelayAmps[i].setBounds(startX + offsetX, rightY, w, h);
+    }
 }
 
 void PluginEditor::layoutRightSideGlobals()
 {
 
+}
+
+// == Drawing Functions ======================================================
+void PluginEditor::drawLeftSideGlobals(juce::Graphics& g)
+{
+    // draw background for delay time controls area
+    g.setColour(findColour(CtmColourIds::darkBgColourId));
+    int x = (col1Width - (col1ToggleW * 2) - col1TogglePadX) / 2;
+    int w = (col1ToggleW * 2) + col1TogglePadX;
+    int h = col1KnobH + col1TogglePadY + col1ToggleH;
+    int y = paddingY + (((getHeight() - (paddingY * 2)) / 2) - h) / 2;
+    g.fillRoundedRectangle(x - 6, y - 6, w + 12, h + 12, 12);
+}
+
+void PluginEditor::drawChannels(juce::Graphics& g)
+{
+    // draw background for delay amplitude sliders
+    g.setColour(findColour(CtmColourIds::delayAmpsAreaColourId));
+    int x = col1Width + col2Margin;
+    int y = (getHeight() / 2) - delayAmpsAreaHeight;
+    int w = col2Width - (2 * col2Margin);
+    int h = delayAmpsAreaHeight * 2;
+    int r = 12;
+    g.fillRoundedRectangle(x, y, w, h, r);
+    // draw shadow on background
+    int s = 6;
+    juce::Colour black = juce::Colours::black.withAlpha(0.3f);
+    juce::Colour trans = juce::Colours::transparentBlack;
+    setVerticalGradient(g, black, y, trans, y + s);
+    g.fillRect(x + r, y, w - 2 * r, s);
+    setHorizontalGradient(g, black, x, trans, x + s);
+    g.fillRect(x, y + r, s, h - 2 * r);
+    setVerticalGradient(g, trans, y + h - s, black, y + h);
+    g.fillRect(x + r, y + h - s, w - 2 * r, s);
+    setHorizontalGradient(g, trans, x + w - s, black, x + w);
+    g.fillRect(x + w - s, y + r, s, h - 2 * r);
+    float pi_2 = (float)M_PI_2;
+    int d = r * 2;
+    juce::Path corners;
+    corners.addPieSegment(x, y, d, d, 0, -1 * pi_2, 0);
+    setRadialGradient(g, trans, x + r, y + r, black, r, r - s);
+    g.fillPath(corners);
+    corners.clear();
+    corners.addPieSegment(x, y + h - d, d, d, 3 * pi_2, 2 * pi_2, 0);
+    setRadialGradient(g, trans, x + r, y + h - r, black, r, r - s);
+    g.fillPath(corners);
+    corners.clear();
+    corners.addPieSegment(x + w - d, y + h - d, d, d, 2 * pi_2, pi_2, 0);
+    setRadialGradient(g, trans, x + w - r, y + h - r, black, r, r - s);
+    g.fillPath(corners);
+    corners.clear();
+    corners.addPieSegment(x + w - d, y, d, d, pi_2, 0, 0);
+    setRadialGradient(g, trans, x + w - r, y + r, black, r, r - s);
+    g.fillPath(corners);
+}
+
+void PluginEditor::drawRightSideGlobals(juce::Graphics& g)
+{
+    juce::ignoreUnused(g);
 }
 
 // === Helper Functions =======================================================
@@ -101,4 +202,33 @@ void PluginEditor::addParameterControl(ParameterControl* control)
     addAndMakeVisible(control->slider);
     addAndMakeVisible(control->label);
     addAndMakeVisible(control->title);
+}
+
+void PluginEditor::setHorizontalGradient
+(juce::Graphics& g, juce::Colour c1, int x1, juce::Colour c2, int x2)
+{
+    g.setGradientFill(juce::ColourGradient::horizontal(c1, x1, c2, x2));
+}
+
+void PluginEditor::setVerticalGradient
+(juce::Graphics& g, juce::Colour c1, int y1, juce::Colour c2, int y2)
+{
+    g.setGradientFill(juce::ColourGradient::vertical(c1, y1, c2, y2));
+}
+
+void PluginEditor::setRadialGradient
+(juce::Graphics& g, juce::Colour c1, int cx, int cy, juce::Colour c2, int r,
+int innerR)
+{
+    auto grad = juce::ColourGradient(c1, cx, cy, c2, cx, cy + r, true);
+    if (innerR == 0 || innerR >= r)
+    {
+        g.setGradientFill(grad);
+    }
+    else
+    {
+        double proportion = (double) innerR / (double) r;
+        grad.addColour(proportion, c1);
+        g.setGradientFill(grad);
+    }
 }

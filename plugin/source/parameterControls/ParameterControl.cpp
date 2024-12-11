@@ -2,7 +2,7 @@
 
 // === Lifecycle ==============================================================
 ParameterControl::ParameterControl()
-    : parameterName(""), titleText(""), everAttached(false)
+    : parameterName(""), showLabel(true), titleText(""), everAttached(false)
 {
     bounds = juce::Rectangle<int>(0, 0, 0, 0);
     setSliderStyle(juce::Slider::RotaryVerticalDrag);
@@ -34,9 +34,12 @@ void ParameterControl::setBounds(int x, int y, int width, int height)
     else
         title.setBounds(x, y, width, 0);
     int sliderY = hasTitle ? y + 20 : y;
-    int sliderH = hasTitle ? height - 38 : height - 18;
+    int sliderH = hasTitle ? height - 38 : (showLabel ? height - 18 : height);
     slider.setBounds(x, sliderY, width, sliderH);
-    label.setBounds(x, y + height - 16, width, 16);
+    if (showLabel)
+        label.setBounds(x, y + height - 16, width, 16);
+    else
+        label.setBounds(x, y + height, width, 0);
 }
 
 void ParameterControl::attachToParameter
@@ -55,6 +58,12 @@ void ParameterControl::attachToParameter
 void ParameterControl::setSliderStyle(juce::Slider::SliderStyle style)
 {
     slider.setSliderStyle(style);
+}
+
+void ParameterControl::setShowLabel(bool show)
+{
+    showLabel = show;
+    setBounds(bounds);
 }
 
 void ParameterControl::setTitleText(std::string s)

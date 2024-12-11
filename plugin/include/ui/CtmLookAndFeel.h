@@ -21,6 +21,12 @@ public:
 private:
     // === Internal Layout Constants ==========================================
     const float rotaryOutlineWidth = 4;
+
+    // === Helper Functions ===================================================
+    void drawLinearSliderNoBar
+    (juce::Graphics&, int x, int y, int w, int h, float pos, juce::Slider&);
+    void drawLinearSliderBar
+    (juce::Graphics&, int x, int y, int w, int h, float pos, juce::Slider&);
 };
 
 enum CtmColourIds
@@ -31,6 +37,8 @@ enum CtmColourIds
     darkOutlineColourId,
     brightOutlineColourId,
     meterFillColourId,
+    BarBackColourId,
     toggledColourId,
-    untoggledColourId
+    untoggledColourId,
+    delayAmpsAreaColourId
 };

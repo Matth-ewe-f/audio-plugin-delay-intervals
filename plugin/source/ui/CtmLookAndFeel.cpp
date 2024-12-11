@@ -10,9 +10,13 @@ CtmLookAndFeel::CtmLookAndFeel()
     setColour(
         CtmColourIds::brightOutlineColourId, Colour::fromRGB(200, 200, 200)
     );
-    setColour(CtmColourIds::meterFillColourId, Colour::fromRGB(236, 142, 10));
+    setColour(CtmColourIds::meterFillColourId, Colour::fromRGB(52, 230, 38));
+    setColour(CtmColourIds::BarBackColourId, Colour::fromRGB(27, 71, 24));
     setColour(CtmColourIds::toggledColourId, Colour::fromRGB(226, 134, 14));
     setColour(CtmColourIds::untoggledColourId, Colour::fromRGB(150, 150, 150));
+    setColour(
+        CtmColourIds::delayAmpsAreaColourId, Colour::fromRGB(13, 23, 13)
+    );
     // override default colors
     setColour(
         juce::ResizableWindow::backgroundColourId,
@@ -100,22 +104,44 @@ void CtmLookAndFeel::drawLinearSlider
 (juce::Graphics& g, int x, int y, int w, int h, float pos, float min,
 float max, juce::Slider::SliderStyle style, juce::Slider& slider)
 {
-    // this function draws all sliders as vertical. If I need a horizontal
-    // slider for this application, I'll implemented it too
-    juce::ignoreUnused(min, max, style);
+    juce::ignoreUnused(min, max);
+    // this function only draws vertical sliders. If I need a horizontal one
+    // for this application, I'll implemented it when I need it
+    if (style == juce::Slider::SliderStyle::LinearVertical)
+        drawLinearSliderNoBar(g, x, y, w, h, pos, slider);
+    else if (style == juce::Slider::SliderStyle::LinearBarVertical)
+        drawLinearSliderBar(g, x, y, w, h, pos, slider);
+}
+
+// === Private Helper =========================================================
+void CtmLookAndFeel::drawLinearSliderNoBar
+(juce::Graphics& g, int x, int y, int w, int h, float p, juce::Slider& slider)
+{
     int cx = x + (w / 2);
     // draw the background
-    g.setColour(findColour(CtmColourIds::darkOutlineColourId));
+    g.setColour(slider.findColour(CtmColourIds::darkOutlineColourId));
     g.fillRoundedRectangle(cx - 4, y, 8, h, 4);
     // draw the fill
     g.setColour(slider.findColour(CtmColourIds::meterFillColourId));
-    g.fillRoundedRectangle(cx - 3, pos, 6, h - (pos - y) - 1, 3);
+    g.fillRoundedRectangle(cx - 3, p, 6, h - (p - y) - 1, 3);
     // draw the shadow of the tick
     juce::Colour shadow = slider.findColour(CtmColourIds::darkOutlineColourId);
     shadow = shadow.withAlpha(0.3f);
     g.setColour(shadow);
-    g.fillRoundedRectangle(cx - 7, pos - 2, 16, 6, 3);
+    g.fillRoundedRectangle(cx - 7, p - 2, 16, 6, 3);
     // draw the tick
     g.setColour(slider.findColour(CtmColourIds::brightOutlineColourId));
-    g.fillRoundedRectangle(cx - 8, pos - 3, 16, 6, 3);
+    g.fillRoundedRectangle(cx - 8, p - 3, 16, 6, 3);
+}
+
+void CtmLookAndFeel::drawLinearSliderBar
+(juce::Graphics& g, int x, int y, int w, int h, float p, juce::Slider& slider)
+{
+    // draw background
+    g.setColour(slider.findColour(CtmColourIds::BarBackColourId));
+    g.fillRoundedRectangle(x, y, w, h, juce::jmin(w / 4, 6));
+    // draw fill
+    g.reduceClipRegion(x, (int)p, w, h - (int)(p - y));
+    g.setColour(slider.findColour(CtmColourIds::meterFillColourId));
+    g.fillRoundedRectangle(x, y, w, h, juce::jmin(w / 4, 6));
 }

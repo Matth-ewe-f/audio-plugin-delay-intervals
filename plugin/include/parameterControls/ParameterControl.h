@@ -25,10 +25,12 @@ public:
     void attachToParameter
     (juce::AudioProcessorValueTreeState*, std::string);
     void setSliderStyle(juce::Slider::SliderStyle);
+    void setShowLabel(bool = true);
     void setTitleText(std::string);
 
 private:
     juce::Rectangle<int> bounds;
+    bool showLabel;
     std::string titleText;
     bool everAttached;
 
