@@ -39,22 +39,22 @@ private:
     ParameterControl wetDry;
 
     // === Layout Constants ===================================================
-    inline static const int col1Width { 112 };
-    inline static const int col1KnobW { 72 };
-    inline static const int col1KnobH { 80 };
-    inline static const int col1ToggleW { 34 };
-    inline static const int col1ToggleH { 22 };
-    inline static const int col1TogglePadX { 2 };
-    inline static const int col1TogglePadY { 8 };
-    inline static const int col2Width { 415 };
-    inline static const int col2Margin { 16 };
-    inline static const int delayAmpsAreaHeight { 72 };
-    inline static const int delayAmpsMarginX { 16 };
-    inline static const int delayAmpsMarginY { 14 };
-    inline static const int col3Width { 64 };
-    inline static const int col3Margin { 16 };
-    inline static const int height { 320 };
-    inline static const int paddingY { 8 };
+    static const int col1Width;
+    static const int col1KnobW;
+    static const int col1KnobH;
+    static const int col1ToggleW;
+    static const int col1ToggleH;
+    static const int col1TogglePadX;
+    static const int col1TogglePadY;
+    static const int col2Width;
+    static const int col2Margin;
+    static const int delayAmpsAreaHeight;
+    static const int delayAmpsMarginX;
+    static const int delayAmpsMarginY;
+    static const int col3Width;
+    static const int col3Margin;
+    static const int height;
+    static const int paddingY;
 
     // === Initialization Functions ===========================================
     void setupLeftSideGlobals();

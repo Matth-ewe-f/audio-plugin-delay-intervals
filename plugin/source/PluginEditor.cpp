@@ -1,6 +1,24 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+// === Layout Constants ===================================================
+const int PluginEditor::col1Width = 112;
+const int PluginEditor::col1KnobW = 72;
+const int PluginEditor::col1KnobH = 80;
+const int PluginEditor::col1ToggleW = 34;
+const int PluginEditor::col1ToggleH = 22;
+const int PluginEditor::col1TogglePadX = 2;
+const int PluginEditor::col1TogglePadY = 8;
+const int PluginEditor::col2Width = 415;
+const int PluginEditor::col2Margin = 16;
+const int PluginEditor::delayAmpsAreaHeight = 72;
+const int PluginEditor::delayAmpsMarginX = 16;
+const int PluginEditor::delayAmpsMarginY = 14;
+const int PluginEditor::col3Width = 64;
+const int PluginEditor::col3Margin = 16;
+const int PluginEditor::height = 320;
+const int PluginEditor::paddingY = 8;
+
 // === Lifecycle ==============================================================
 PluginEditor::PluginEditor (PluginProcessor &p)
     : AudioProcessorEditor(&p), processorRef(p)
