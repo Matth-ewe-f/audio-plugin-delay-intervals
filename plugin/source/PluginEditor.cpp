@@ -9,14 +9,16 @@ const int PluginEditor::col1ToggleW = 34;
 const int PluginEditor::col1ToggleH = 22;
 const int PluginEditor::col1TogglePadX = 2;
 const int PluginEditor::col1TogglePadY = 8;
-const int PluginEditor::col2Width = 415;
+const int PluginEditor::col2Width = 411;
 const int PluginEditor::col2Margin = 16;
-const int PluginEditor::delayAmpsAreaHeight = 72;
-const int PluginEditor::delayAmpsMarginX = 16;
-const int PluginEditor::delayAmpsMarginY = 14;
+const int PluginEditor::delayAmpsAreaHeight = 64;
+const int PluginEditor::delayAmpsMarginX = 14;
+const int PluginEditor::delayAmpsMarginY = 12;
+const int PluginEditor::filterKnobW = 54;
+const int PluginEditor::filterKnobH = 68;
 const int PluginEditor::col3Width = 64;
 const int PluginEditor::col3Margin = 16;
-const int PluginEditor::height = 320;
+const int PluginEditor::height = 352;
 const int PluginEditor::paddingY = 8;
 
 // === Lifecycle ==============================================================
@@ -24,6 +26,7 @@ PluginEditor::PluginEditor (PluginProcessor &p)
     : AudioProcessorEditor(&p), processorRef(p)
 {
     juce::ignoreUnused(processorRef);
+    setWantsKeyboardFocus(true);
     setLookAndFeel(&lookAndFeel);
     // setup components
     setupLeftSideGlobals();
@@ -54,14 +57,40 @@ void PluginEditor::setupLeftSideGlobals()
 
 void PluginEditor::setupChannels()
 {
+    // setup filter controls
+    leftFilterFirstLow.setTitleText("Low");
+    leftFilterFirstLow.label.setPostfix(" Hz");
+    leftFilterFirstLow.setTightText();
     addParameterControl(&leftFilterFirstLow);
+    leftFilterFirstHigh.setTitleText("High");
+    leftFilterFirstHigh.label.setPostfix(" Hz");
+    leftFilterFirstHigh.setTightText();
     addParameterControl(&leftFilterFirstHigh);
+    leftFilterSecondLow.setTitleText("Low");
+    leftFilterSecondLow.label.setPostfix(" Hz");
+    leftFilterSecondLow.setTightText();
     addParameterControl(&leftFilterSecondLow);
+    leftFilterSecondHigh.setTitleText("High");
+    leftFilterSecondHigh.label.setPostfix(" Hz");
+    leftFilterSecondHigh.setTightText();
     addParameterControl(&leftFilterSecondHigh);
+    rightFilterFirstLow.setTitleText("Low");
+    rightFilterFirstLow.label.setPostfix(" Hz");
+    rightFilterFirstLow.setTightText();
     addParameterControl(&rightFilterFirstLow);
+    rightFilterFirstHigh.setTitleText("High");
+    rightFilterFirstHigh.label.setPostfix(" Hz");
+    rightFilterFirstHigh.setTightText();
     addParameterControl(&rightFilterFirstHigh);
+    rightFilterSecondLow.setTitleText("Low");
+    rightFilterSecondLow.label.setPostfix(" Hz");
+    rightFilterSecondLow.setTightText();
     addParameterControl(&rightFilterSecondLow);
+    rightFilterSecondHigh.setTitleText("High");
+    rightFilterSecondHigh.label.setPostfix(" Hz");
+    rightFilterSecondHigh.setTightText();
     addParameterControl(&rightFilterSecondHigh);
+    // setup delay amplitude sliders
     for (int i = 0;i < leftDelayAmpsLength;i++)
     {
         leftDelayAmps[i].setShowLabel(false);
@@ -127,6 +156,7 @@ void PluginEditor::layoutLeftSideGlobals()
 
 void PluginEditor::layoutChannels()
 {
+    // lay out delay amplitude sliders
     int pad;
     if (leftDelayAmpsLength == 8)
         pad = 4;
@@ -136,8 +166,8 @@ void PluginEditor::layoutChannels()
         pad = 1;
     int leftY = (getHeight() / 2) - delayAmpsAreaHeight + delayAmpsMarginY;
     int rightY = (getHeight() / 2) + 3;
-    int usableW = col2Width - (2 * col2Margin) - delayAmpsMarginX;
-    int w = (usableW / leftDelayAmpsLength) - pad;
+    int ampsUsableW = col2Width - (2 * col2Margin) - delayAmpsMarginX;
+    int w = (ampsUsableW / leftDelayAmpsLength) - pad;
     int h = delayAmpsAreaHeight - delayAmpsMarginY - 3;
     for (int i = 0;i < leftDelayAmpsLength;i++)
     {
@@ -148,6 +178,25 @@ void PluginEditor::layoutChannels()
         leftDelayAmps[i].setBounds(startX + offsetX, leftY, w, h);
         rightDelayAmps[i].setBounds(startX + offsetX, rightY, w, h);
     }
+    // layout filters
+    int filterW = filterKnobW * 2;
+    int filterAreaW = (col2Width - (2 * col2Margin));
+    int xStart = col1Width + col2Margin;
+    int x1 = xStart + (filterAreaW - 2 * filterW) / 3;
+    int y1 = (((getHeight() / 2) - delayAmpsAreaHeight) - filterKnobH) / 2 + 9;
+    int y2 = (getHeight() / 2) + delayAmpsAreaHeight;
+    y2 = y2 + 9 + (getHeight() - y2 - filterKnobH) / 2;
+    leftFilterFirstLow.setBounds(x1, y1, filterKnobW, filterKnobH);
+    rightFilterFirstLow.setBounds(x1, y2, filterKnobW, filterKnobH);
+    int x2 = x1 + filterKnobW;
+    leftFilterFirstHigh.setBounds(x2, y1, filterKnobW, filterKnobH);
+    rightFilterFirstHigh.setBounds(x2, y2, filterKnobW, filterKnobH);
+    int x3 = xStart + 2 * ((filterAreaW - 2 * filterW) / 3) + filterW;
+    leftFilterSecondLow.setBounds(x3, y1, filterKnobW, filterKnobH);
+    rightFilterSecondLow.setBounds(x3, y2, filterKnobW, filterKnobH);
+    int x4 = x3 + filterKnobW;
+    leftFilterSecondHigh.setBounds(x4, y1, filterKnobW, filterKnobH);
+    rightFilterSecondHigh.setBounds(x4, y2, filterKnobW, filterKnobH);
 }
 
 void PluginEditor::layoutRightSideGlobals()
@@ -207,6 +256,30 @@ void PluginEditor::drawChannels(juce::Graphics& g)
     corners.addPieSegment(x + w - d, y, d, d, pi_2, 0, 0);
     setRadialGradient(g, trans, x + w - r, y + r, black, r, r - s);
     g.fillPath(corners);
+    // draw backgrounds for filters
+    int filterW = filterKnobW * 2;
+    int filterAreaW = (col2Width - (2 * col2Margin));
+    int xStart = col1Width + col2Margin;
+    int x1 = xStart + (filterAreaW - 2 * filterW) / 3;
+    int y1 = (((getHeight() / 2) - delayAmpsAreaHeight) - filterKnobH) / 2 - 9;
+    int x2 = xStart + 2 * ((filterAreaW - 2 * filterW) / 3) + filterW;
+    int y2 = (getHeight() / 2) + delayAmpsAreaHeight;
+    y2 = y2 + (getHeight() - y2 - filterKnobH) / 2 - 9;
+    int fw = filterKnobW * 2;
+    int fh = filterKnobH + 18;
+    g.setColour(findColour(CtmColourIds::darkBgColourId));
+    g.fillRoundedRectangle(x1 - 6, y1 - 6, fw + 12, fh + 12, 12);
+    g.fillRoundedRectangle(x2 - 6, y1 - 6, fw + 12, fh + 12, 12);
+    g.fillRoundedRectangle(x1 - 6, y2 - 6, fw + 12, fh + 12, 12);
+    g.fillRoundedRectangle(x2 - 6, y2 - 6, fw + 12, fh + 12, 12);
+    // draw filter text
+    g.setColour(juce::Colours::white);
+    g.setFont(14);
+    auto centered = juce::Justification::centred;
+    g.drawText("First Repeat Filter", x1 - 6, y1, fw + 12, 14, centered);
+    g.drawText("Subsequent Filter", x2 - 6, y1, fw + 12, 14, centered);
+    g.drawText("First Repeat Filter", x1 - 6, y2, fw + 12, 14, centered);
+    g.drawText("Subsequent Filter", x2 - 6, y2, fw + 12, 14, centered);
 }
 
 void PluginEditor::drawRightSideGlobals(juce::Graphics& g)

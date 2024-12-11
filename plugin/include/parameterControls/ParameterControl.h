@@ -27,11 +27,13 @@ public:
     void setSliderStyle(juce::Slider::SliderStyle);
     void setShowLabel(bool = true);
     void setTitleText(std::string);
+    void setTightText(bool = true);
 
 private:
     juce::Rectangle<int> bounds;
     bool showLabel;
     std::string titleText;
+    bool tightText;
     bool everAttached;
 
 };

@@ -51,6 +51,8 @@ private:
     static const int delayAmpsAreaHeight;
     static const int delayAmpsMarginX;
     static const int delayAmpsMarginY;
+    static const int filterKnobW;
+    static const int filterKnobH;
     static const int col3Width;
     static const int col3Margin;
     static const int height;
