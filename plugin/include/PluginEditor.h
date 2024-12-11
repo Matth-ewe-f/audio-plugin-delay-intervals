@@ -12,10 +12,13 @@ public:
     ~PluginEditor() override;
 
     // === Graphics ===========================================================
-    void paint (juce::Graphics&) override;
+    void paint(juce::Graphics&) override;
+    void paintOverChildren(juce::Graphics&) override;
     void resized() override;
 
 private:
+    PluginProcessor& processorRef;
+    CtmLookAndFeel lookAndFeel;
     // === Global Controls (Left Side) ========================================
     ParameterControl delayTime;
     ParameterToggle noTempoSync;
@@ -30,10 +33,11 @@ private:
     ParameterControl rightFilterFirstHigh;
     ParameterControl rightFilterSecondLow;
     ParameterControl rightFilterSecondHigh;
-    ParameterControl leftDelayAmps[16];
-    int leftDelayAmpsLength = 16;
-    ParameterControl rightDelayAmps[16];
-    int rightDelayAmpsLength = 16;
+    ParameterControl leftDelayAmps[32];
+    int leftDelayAmpsLength = 32;
+    ParameterControl rightDelayAmps[32];
+    int rightDelayAmpsLength = 32;
+    int numDelayAmps; // will become a parameter after layout is finished
     // === Global Controls (Right Side) =======================================
     ParameterControl falloff;
     ParameterControl wetDry;
@@ -73,6 +77,7 @@ private:
     void drawLeftSideGlobals(juce::Graphics&);
     void drawChannels(juce::Graphics&);
     void drawChannelLabels(juce::Graphics&);
+    void drawDelayAmpBeatMarkers(juce::Graphics&);
     void drawRightSideGlobals(juce::Graphics&);
 
     // === Helper Functions ===================================================
@@ -85,7 +90,5 @@ private:
     (juce::Graphics&, juce::Colour c1, int cx, int cy, juce::Colour c2, int r,
     int innerR);
 
-    PluginProcessor& processorRef;
-    CtmLookAndFeel lookAndFeel;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginEditor)
 };

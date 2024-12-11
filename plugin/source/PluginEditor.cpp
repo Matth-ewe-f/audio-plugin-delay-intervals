@@ -24,7 +24,7 @@ const int PluginEditor::paddingY = 8;
 
 // === Lifecycle ==============================================================
 PluginEditor::PluginEditor (PluginProcessor &p)
-    : AudioProcessorEditor(&p), processorRef(p)
+    : AudioProcessorEditor(&p), processorRef(p), numDelayAmps(16)
 {
     juce::ignoreUnused(processorRef);
     setWantsKeyboardFocus(true);
@@ -136,6 +136,11 @@ void PluginEditor::paint(juce::Graphics &g)
     g.drawRect(0, 0, getWidth(), getHeight(), 1);
 }
 
+void PluginEditor::paintOverChildren(juce::Graphics& g)
+{
+    drawDelayAmpBeatMarkers(g);
+}
+
 void PluginEditor::resized()
 {
     layoutLeftSideGlobals();
@@ -164,26 +169,30 @@ void PluginEditor::layoutChannels()
 {
     // lay out delay amplitude sliders
     int pad;
-    if (leftDelayAmpsLength == 8)
+    if (numDelayAmps == 8)
         pad = 4;
-    else if (leftDelayAmpsLength == 16)
+    else if (numDelayAmps == 16)
         pad = 2;
     else
         pad = 1;
     int leftY = (getHeight() / 2) - delayAmpsAreaHeight + delayAmpsMarginY;
     int rightY = (getHeight() / 2) + 3;
     int ampsUsableW = col2Width - (2 * col2Margin) - delayAmpsMarginX;
-    int w = (ampsUsableW / leftDelayAmpsLength) - pad;
+    int w = (ampsUsableW / numDelayAmps) - pad;
     int h = delayAmpsAreaHeight - delayAmpsMarginY - 3;
-    for (int i = 0;i < leftDelayAmpsLength;i++)
+    for (int i = 0;i < numDelayAmps;i++)
     {
         int startX = col1Width + col2Margin + delayAmpsMarginX;
-        if (leftDelayAmpsLength == 8)
+        if (numDelayAmps == 8)
             startX -= 2;
         int offsetX = (w + pad) * i;
         leftDelayAmps[i].setBounds(startX + offsetX, leftY, w, h);
         rightDelayAmps[i].setBounds(startX + offsetX, rightY, w, h);
     }
+    for (int i = numDelayAmps;i < leftDelayAmpsLength;i++)
+        leftDelayAmps[i].setBounds(0, 0, 0, 0);
+    for (int i = numDelayAmps;i < rightDelayAmpsLength;i++)
+        rightDelayAmps[i].setBounds(0, 0, 0, 0);
     // layout filters
     int filterW = filterKnobW * 2;
     int filterAreaW = (col2Width - (2 * col2Margin));
@@ -328,6 +337,43 @@ void PluginEditor::drawChannelLabels(juce::Graphics& g)
     g.setColour(juce::Colours::white);
     g.drawText("Left", x, y1 + 2, wl - (2 * edge / 3), h - 4, center);
     g.drawText("Right", x, y2 - h + 1, wr - (2 * edge / 3), h - 4, center);
+}
+
+void PluginEditor::drawDelayAmpBeatMarkers(juce::Graphics& g)
+{
+    // get dimension info
+    int numDividers = (numDelayAmps / 4) - 1;
+    int ampsUsableW = col2Width - (2 * col2Margin) - delayAmpsMarginX;
+    int dividerW = ampsUsableW / numDelayAmps;
+    int xStart = col1Width + col2Margin + delayAmpsMarginX;
+    int cy = getHeight() / 2;
+    juce::Colour opaque = findColour(CtmColourIds::brightOutlineColourId);
+    opaque = opaque.withAlpha(0.7f);
+    juce::Colour trans = opaque.withAlpha(0.0f);
+    // draw each divider
+    for (int i = 0;i < numDividers;i++)
+    {
+        int x = xStart + (dividerW * (i + 1) * 4) - 1;
+        if (numDelayAmps == 8)
+            x -= 3;
+        int lineH;
+        if (numDividers == 1)
+            lineH = 24;
+        else if (numDividers == 3)
+            lineH = i == 1 ? 24 : 18;
+        else if (numDividers == 7)
+            lineH = i == 3 ? 24 : (i % 2 == 1) ? 18 : 8;
+        else
+            lineH = 0;
+        int y1 = cy - lineH;
+        int y2 = cy + lineH;
+        auto grad = juce::ColourGradient::vertical(trans, y1, trans, y2);
+        double p = 2.0 / lineH; // numerator * 2 is length of color fade
+        grad.addColour(p, opaque);
+        grad.addColour(1 - p, opaque);
+        g.setGradientFill(grad);
+        g.drawLine(x, y1, x, y2);
+    }
 }
 
 void PluginEditor::drawRightSideGlobals(juce::Graphics& g)
