@@ -54,7 +54,8 @@ private:
     static const int filterKnobW;
     static const int filterKnobH;
     static const int col3Width;
-    static const int col3Margin;
+    static const int col3KnobW;
+    static const int col3KnobH;
     static const int height;
     static const int paddingY;
 

@@ -16,8 +16,9 @@ const int PluginEditor::delayAmpsMarginX = 14;
 const int PluginEditor::delayAmpsMarginY = 12;
 const int PluginEditor::filterKnobW = 54;
 const int PluginEditor::filterKnobH = 68;
-const int PluginEditor::col3Width = 64;
-const int PluginEditor::col3Margin = 16;
+const int PluginEditor::col3Width = 112;
+const int PluginEditor::col3KnobW = 72;
+const int PluginEditor::col3KnobH = 80;
 const int PluginEditor::height = 352;
 const int PluginEditor::paddingY = 8;
 
@@ -111,7 +112,7 @@ void PluginEditor::setupRightSideGlobals()
     falloff.setTitleText("Auto-Falloff");
     addParameterControl(&falloff);
     wetDry.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
-    wetDry.setTitleText("Wet/Dry Mix");
+    wetDry.setTitleText("Mix");
     addParameterControl(&wetDry);
 }
 
@@ -206,7 +207,12 @@ void PluginEditor::layoutChannels()
 
 void PluginEditor::layoutRightSideGlobals()
 {
-
+    int x = col1Width + col2Width + (col3Width - col3KnobW) / 2;
+    int halfHeight = (getHeight() - (paddingY * 2)) / 2;
+    int y1 = paddingY + 2 * ((halfHeight - col3KnobH) / 3);
+    falloff.setBounds(x, y1, col3KnobW, col3KnobH);
+    int y2 = paddingY + halfHeight + (halfHeight - col3KnobH) / 3;
+    wetDry.setBounds(x, y2, col3KnobW, col3KnobH);
 }
 
 // == Drawing Functions ======================================================
