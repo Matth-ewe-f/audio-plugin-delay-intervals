@@ -12,7 +12,7 @@ CtmLookAndFeel::CtmLookAndFeel()
     );
     setColour(CtmColourIds::meterFillColourId, Colour::fromRGB(52, 230, 38));
     setColour(CtmColourIds::BarBackColourId, Colour::fromRGB(27, 71, 24));
-    setColour(CtmColourIds::toggledColourId, Colour::fromRGB(226, 134, 14));
+    setColour(CtmColourIds::toggledColourId, Colour::fromRGB(28, 190, 14));
     setColour(CtmColourIds::untoggledColourId, Colour::fromRGB(150, 150, 150));
     setColour(
         CtmColourIds::delayAmpsAreaColourId, Colour::fromRGB(13, 23, 13)
