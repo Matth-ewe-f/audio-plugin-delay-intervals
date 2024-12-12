@@ -20,9 +20,9 @@ target_sources(
         source/ui/CtmSlider.cpp
         source/ui/SliderLabel.cpp
         source/ui/CtmToggle.cpp
-        source/filters/ParameterBlueprint.cpp
         source/parameterControls/ParameterControl.cpp
         source/parameterControls/ParameterToggle.cpp
+        source/parameterControls/ParameterFactory.cpp
         source/PluginProcessor.cpp
         source/PluginEditor.cpp
 )
@@ -31,7 +31,6 @@ target_include_directories(
     ${PROJECT_NAME}
     PRIVATE
         include/ui
-        include/filters
         include/parameterControls
         include
 )

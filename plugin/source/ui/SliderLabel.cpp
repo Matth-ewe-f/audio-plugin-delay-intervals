@@ -95,55 +95,20 @@ void SliderLabel::sliderValueChanged(juce::Slider* slider)
     updateText(slider);
 }
 
-// warning can safely be ignored - float comparison involving no arithmetic
-// is perfectly safe
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wfloat-equal"
 void SliderLabel::onInputReturnKey()
 {
-    double newValue = convertToSliderValue(getText().toStdString());
-    if (newValue != __DBL_MIN__)
-        attachedSlider->setValue(newValue);
+    attachedSlider->setValue(convertToSliderValue(getText()));
     getParentComponent()->grabKeyboardFocus();
 }
-#pragma GCC diagnostic pop
 
-double SliderLabel::convertToSliderValue(std::string text)
+double SliderLabel::convertToSliderValue(const juce::String& text)
 {
-    for (size_t i = 0;i < text.length();i++)
-    {
-        char c = text[i];
-        bool first = i == 0;
-        bool last = i == text.length() - 1;
-        if (!isdigit(c) && c != '.' && !(first && c == '-')
-            && !(last && c == 'k'))
-        {
-            return __DBL_MIN__;
-        }
-    }
-    double result;
-    if (text[text.length() - 1] == 'k')
-        result = std::stod(text.substr(0, text.length() - 1)) * 1000;
-    else
-        result = std::stod(text);
-    if (typeNegative && result < 0)
-        result *= -1;
-    return result;
+    return attachedSlider->valueFromTextFunction(text);
 }
 
 std::string SliderLabel::getSliderValueAsString(juce::Slider* slider)
 {
     double valueAsDbl = slider->getValue();
-    if (choices.size() > (int)valueAsDbl)
-    {
-        return choices[(int)valueAsDbl].toStdString();
-    }
-    std::string value;
-    if (maxDecimals >= 2 && valueAsDbl < 10)
-        value = std::format("{:.2f}", slider->getValue());
-    else if (maxDecimals >= 1 && valueAsDbl < 1000)
-        value = std::format("{:.1f}", slider->getValue());
-    else
-        value = std::format("{:.0f}", slider->getValue());
+    std::string value = slider->getTextFromValue(valueAsDbl).toStdString();
     return typeNegative ? '-' + value : value;
 }

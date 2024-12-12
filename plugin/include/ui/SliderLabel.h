@@ -42,6 +42,6 @@ private:
     // === Private Helper =====================================================
     void sliderValueChanged(juce::Slider*) override;
     void onInputReturnKey();
-    double convertToSliderValue(std::string);
+    double convertToSliderValue(const juce::String&);
     std::string getSliderValueAsString(juce::Slider*);
 };

@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "ParameterFactory.h"
 
 // === Lifecycle ==============================================================
 PluginProcessor::PluginProcessor()
@@ -29,17 +30,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout
 PluginProcessor::createParameters()
 {
 	juce::AudioProcessorValueTreeState::ParameterLayout parameters;
-	parameters.add(std::make_unique<juce::AudioParameterFloat>(
-		"delay-time",
-		"Delay Time",
-		juce::NormalisableRange<float>(0, 2000, 1),
-		0
+	parameters.add(ParameterFactory::createTimeParameter(
+		"delay-time", "Delay Time", 20, 250, 1, 100
 	));
-	parameters.add(std::make_unique<juce::AudioParameterChoice>(
-		"num-intervals",
-		"Number of Intervals",
-		juce::StringArray("8", "16", "32"),
-		1
+	parameters.add(ParameterFactory::createIntChoiceParameter(
+		"num-intervals", "Intervals", juce::Array<int>(8, 16, 32), 1
 	));
 	return parameters;
 }
