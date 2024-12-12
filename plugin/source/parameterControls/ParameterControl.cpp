@@ -44,11 +44,17 @@ void ParameterControl::setBounds(int x, int y, int width, int height)
 void ParameterControl::attachToParameter
 (juce::AudioProcessorValueTreeState* stateTree, std::string param)
 {
+    // delete the old attachment
     SliderAttachment* old = attachment.release();
     if (old != nullptr)
         delete old;
+    // attach to the new parameter
     parameterName = param;
     attachment.reset(new SliderAttachment(*stateTree, param, slider));
+    juce::RangedAudioParameter* p = stateTree->getParameter(param);
+    if (auto choice = dynamic_cast<juce::AudioParameterChoice*>(p))
+        label.setChoicesArrayForChoiceParameter(choice->getAllValueStrings());
+    // handle first attachment flag
     if (!everAttached)
         label.updateText(&slider);
     everAttached = true;

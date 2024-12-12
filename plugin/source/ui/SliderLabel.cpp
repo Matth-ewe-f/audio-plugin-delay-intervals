@@ -59,6 +59,11 @@ void SliderLabel::setShowPlusForPositive(bool show)
     showPlus = show;
 }
 
+void SliderLabel::setChoicesArrayForChoiceParameter(juce::StringArray arr)
+{
+    choices = arr;
+}
+
 // === Font Setters ===========================================================
 void SliderLabel::setMainFont(const juce::FontOptions& font)
 {
@@ -129,6 +134,10 @@ double SliderLabel::convertToSliderValue(std::string text)
 std::string SliderLabel::getSliderValueAsString(juce::Slider* slider)
 {
     double valueAsDbl = slider->getValue();
+    if (choices.size() > (int)valueAsDbl)
+    {
+        return choices[(int)valueAsDbl].toStdString();
+    }
     std::string value;
     if (maxDecimals >= 2 && valueAsDbl < 10)
         value = std::format("{:.2f}", slider->getValue());

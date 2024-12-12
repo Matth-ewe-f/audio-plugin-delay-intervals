@@ -4,7 +4,9 @@
 #include "ParameterControl.h"
 #include "ParameterToggle.h"
 
-class PluginEditor final : public juce::AudioProcessorEditor
+class PluginEditor final :
+    public juce::AudioProcessorEditor,
+    public juce::AudioProcessorValueTreeState::Listener
 {
 public:
     // === Lifecycle ==========================================================
@@ -15,6 +17,9 @@ public:
     void paint(juce::Graphics&) override;
     void paintOverChildren(juce::Graphics&) override;
     void resized() override;
+
+    // === Listener ===========================================================
+    void parameterChanged(const juce::String&, float) override;
 
 private:
     PluginProcessor& processorRef;

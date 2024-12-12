@@ -19,6 +19,7 @@ public:
     void setTypeNegativeValues(bool);
     void setMaxDecimals(int);
     void setShowPlusForPositive(bool);
+    void setChoicesArrayForChoiceParameter(juce::StringArray);
 
     // === Focus Functions ====================================================
     void focusGained(juce::Component::FocusChangeType) override;
@@ -36,6 +37,7 @@ private:
     int maxDecimals;
     bool showPlus;
     bool typeNegative;
+    juce::StringArray choices;
 
     // === Private Helper =====================================================
     void sliderValueChanged(juce::Slider*) override;

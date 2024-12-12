@@ -24,11 +24,11 @@ const int PluginEditor::paddingY = 8;
 
 // === Lifecycle ==============================================================
 PluginEditor::PluginEditor (PluginProcessor &p)
-    : AudioProcessorEditor(&p), processorRef(p), numDelayAmps(16)
+    : AudioProcessorEditor(&p), processorRef(p)
 {
-    juce::ignoreUnused(processorRef);
     setWantsKeyboardFocus(true);
     setLookAndFeel(&lookAndFeel);
+    processorRef.tree.addParameterListener("num-intervals", this);
     // setup components
     setupLeftSideGlobals();
     setupChannels();
@@ -46,11 +46,13 @@ void PluginEditor::setupLeftSideGlobals()
 {
     delayTime.setSliderStyle(juce::Slider::RotaryVerticalDrag);
     delayTime.setTitleText("Delay Time");
+    delayTime.attachToParameter(&processorRef.tree, "delay-time");
     addParameterControl(&delayTime);
     noTempoSync.toggle.setText("MS");
     addAndMakeVisible(noTempoSync.toggle);
     tempoSync.toggle.setText("TP");
     addAndMakeVisible(tempoSync.toggle);
+    numIntervals.attachToParameter(&processorRef.tree, "num-intervals");
     numIntervals.setSliderStyle(juce::Slider::RotaryVerticalDrag);
     numIntervals.setTitleText("Intervals");
     addParameterControl(&numIntervals);
@@ -58,6 +60,9 @@ void PluginEditor::setupLeftSideGlobals()
 
 void PluginEditor::setupChannels()
 {
+    // get the number of delay amplitude sliders to show
+    int n = (int)*processorRef.tree.getRawParameterValue("num-intervals");
+    numDelayAmps = n == 0 ? 8 : (n == 1 ? 16 : 32);
     // setup filter controls
     leftFilterFirstLow.setTitleText("Low");
     leftFilterFirstLow.label.setPostfix(" Hz");
@@ -146,6 +151,16 @@ void PluginEditor::resized()
     layoutLeftSideGlobals();
     layoutChannels();
     layoutRightSideGlobals();
+}
+
+// === Listener ===============================================================
+void PluginEditor::parameterChanged(const juce::String& param, float value)
+{
+    int v = (int) value;
+    if (param.compare("num-intervals") == 0)
+        numDelayAmps = v == 0 ? 8 : (v == 1 ? 16 : 32);
+    repaint();
+    resized();
 }
 
 // === Layout Functions =======================================================
