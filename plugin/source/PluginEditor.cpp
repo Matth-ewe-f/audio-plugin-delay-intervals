@@ -39,7 +39,10 @@ PluginEditor::PluginEditor (PluginProcessor &p)
     setSize(w, h);
 }
 
-PluginEditor::~PluginEditor() { }
+PluginEditor::~PluginEditor()
+{
+    processorRef.tree.removeParameterListener("num-intervals", this);
+}
 
 // === Initialization Functions ===============================================
 void PluginEditor::setupLeftSideGlobals()
@@ -149,7 +152,8 @@ void PluginEditor::paintOverChildren(juce::Graphics& g)
 void PluginEditor::resized()
 {
     layoutLeftSideGlobals();
-    layoutChannels();
+    layoutChannelFilters();
+    layoutDelayAmps();
     layoutRightSideGlobals();
 }
 
@@ -159,8 +163,13 @@ void PluginEditor::parameterChanged(const juce::String& param, float value)
     int v = (int) value;
     if (param.compare("num-intervals") == 0)
         numDelayAmps = v == 0 ? 8 : (v == 1 ? 16 : 32);
+    triggerAsyncUpdate();
+}
+
+void PluginEditor::handleAsyncUpdate()
+{
+    layoutDelayAmps();
     repaint();
-    resized();
 }
 
 // === Layout Functions =======================================================
@@ -180,9 +189,33 @@ void PluginEditor::layoutLeftSideGlobals()
     numIntervals.setBounds(x, intervalsY, col1KnobW, col1KnobH);
 }
 
-void PluginEditor::layoutChannels()
+void PluginEditor::layoutChannelFilters()
 {
-    // lay out delay amplitude sliders
+    // calculate dimensions and shared positions
+    int filterW = filterKnobW * 2;
+    int filterAreaW = (col2Width - (2 * col2Margin));
+    int xStart = col1Width + col2Margin;
+    int x1 = xStart + (filterAreaW - 2 * filterW) / 3;
+    int y1 = (((getHeight() / 2) - delayAmpsAreaHeight) - filterKnobH) / 2 + 9;
+    int y2 = (getHeight() / 2) + delayAmpsAreaHeight;
+    y2 = y2 + 9 + (getHeight() - y2 - filterKnobH) / 2;
+    // lay out filters
+    leftFilterFirstLow.setBounds(x1, y1, filterKnobW, filterKnobH);
+    rightFilterFirstLow.setBounds(x1, y2, filterKnobW, filterKnobH);
+    int x2 = x1 + filterKnobW;
+    leftFilterFirstHigh.setBounds(x2, y1, filterKnobW, filterKnobH);
+    rightFilterFirstHigh.setBounds(x2, y2, filterKnobW, filterKnobH);
+    int x3 = xStart + 2 * ((filterAreaW - 2 * filterW) / 3) + filterW;
+    leftFilterSecondLow.setBounds(x3, y1, filterKnobW, filterKnobH);
+    rightFilterSecondLow.setBounds(x3, y2, filterKnobW, filterKnobH);
+    int x4 = x3 + filterKnobW;
+    leftFilterSecondHigh.setBounds(x4, y1, filterKnobW, filterKnobH);
+    rightFilterSecondHigh.setBounds(x4, y2, filterKnobW, filterKnobH);
+}
+
+void PluginEditor::layoutDelayAmps()
+{
+    // calculate the dimensions and shared positions
     int pad;
     if (numDelayAmps == 8)
         pad = 4;
@@ -195,6 +228,7 @@ void PluginEditor::layoutChannels()
     int ampsUsableW = col2Width - (2 * col2Margin) - delayAmpsMarginX;
     int w = (ampsUsableW / numDelayAmps) - pad;
     int h = delayAmpsAreaHeight - delayAmpsMarginY - 3;
+    // layout as many sliders as are necessary
     for (int i = 0;i < numDelayAmps;i++)
     {
         int startX = col1Width + col2Margin + delayAmpsMarginX;
@@ -204,29 +238,11 @@ void PluginEditor::layoutChannels()
         leftDelayAmps[i].setBounds(startX + offsetX, leftY, w, h);
         rightDelayAmps[i].setBounds(startX + offsetX, rightY, w, h);
     }
+    // hide any other sliders
     for (int i = numDelayAmps;i < leftDelayAmpsLength;i++)
         leftDelayAmps[i].setBounds(0, 0, 0, 0);
     for (int i = numDelayAmps;i < rightDelayAmpsLength;i++)
         rightDelayAmps[i].setBounds(0, 0, 0, 0);
-    // layout filters
-    int filterW = filterKnobW * 2;
-    int filterAreaW = (col2Width - (2 * col2Margin));
-    int xStart = col1Width + col2Margin;
-    int x1 = xStart + (filterAreaW - 2 * filterW) / 3;
-    int y1 = (((getHeight() / 2) - delayAmpsAreaHeight) - filterKnobH) / 2 + 9;
-    int y2 = (getHeight() / 2) + delayAmpsAreaHeight;
-    y2 = y2 + 9 + (getHeight() - y2 - filterKnobH) / 2;
-    leftFilterFirstLow.setBounds(x1, y1, filterKnobW, filterKnobH);
-    rightFilterFirstLow.setBounds(x1, y2, filterKnobW, filterKnobH);
-    int x2 = x1 + filterKnobW;
-    leftFilterFirstHigh.setBounds(x2, y1, filterKnobW, filterKnobH);
-    rightFilterFirstHigh.setBounds(x2, y2, filterKnobW, filterKnobH);
-    int x3 = xStart + 2 * ((filterAreaW - 2 * filterW) / 3) + filterW;
-    leftFilterSecondLow.setBounds(x3, y1, filterKnobW, filterKnobH);
-    rightFilterSecondLow.setBounds(x3, y2, filterKnobW, filterKnobH);
-    int x4 = x3 + filterKnobW;
-    leftFilterSecondHigh.setBounds(x4, y1, filterKnobW, filterKnobH);
-    rightFilterSecondHigh.setBounds(x4, y2, filterKnobW, filterKnobH);
 }
 
 void PluginEditor::layoutRightSideGlobals()

@@ -6,7 +6,8 @@
 
 class PluginEditor final :
     public juce::AudioProcessorEditor,
-    public juce::AudioProcessorValueTreeState::Listener
+    public juce::AudioProcessorValueTreeState::Listener,
+    public juce::AsyncUpdater
 {
 public:
     // === Lifecycle ==========================================================
@@ -18,8 +19,9 @@ public:
     void paintOverChildren(juce::Graphics&) override;
     void resized() override;
 
-    // === Listener ===========================================================
+    // === Listener and Updated ===============================================
     void parameterChanged(const juce::String&, float) override;
+    void handleAsyncUpdate() override;
 
 private:
     PluginProcessor& processorRef;
@@ -75,7 +77,8 @@ private:
 
     // === Layout Functions ===================================================
     void layoutLeftSideGlobals();
-    void layoutChannels();
+    void layoutChannelFilters();
+    void layoutDelayAmps();
     void layoutRightSideGlobals();
 
     // == Drawing Functions ===================================================
