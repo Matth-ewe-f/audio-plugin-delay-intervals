@@ -2,6 +2,10 @@
 #include "PluginEditor.h"
 #include "ParameterFactory.h"
 
+// === Constants ==============================================================
+const float PluginProcessor::maxDelayTime = 250;
+const int PluginProcessor::maxIntervals = 32;
+
 // === Lifecycle ==============================================================
 PluginProcessor::PluginProcessor()
 	: AudioProcessor(BusesProperties()
@@ -12,7 +16,8 @@ PluginProcessor::PluginProcessor()
 		.withOutput("Output", juce::AudioChannelSet::stereo(), true)
 #endif
 	),
-	tree(*this, nullptr, "PARAMETERS", createParameters())
+	tree(*this, nullptr, "PARAMETERS", createParameters()),
+	lastSampleRate(44100)
 {
 #if PERFETTO
     MelatoninPerfetto::get().beginSession();
@@ -31,8 +36,9 @@ PluginProcessor::createParameters()
 {
 	juce::AudioProcessorValueTreeState::ParameterLayout parameters;
 	parameters.add(ParameterFactory::createTimeParameter(
-		"delay-time", "Delay Time", 20, 250, 1, 100
+		"delay-time", "Delay Time", 20, maxDelayTime, 1, 100
 	));
+	// keep `maxIntervals` reflective of this parameter
 	parameters.add(ParameterFactory::createIntChoiceParameter(
 		"num-intervals", "Intervals", juce::Array<int>(8, 16, 32), 1
 	));
@@ -46,8 +52,7 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 	juce::ignoreUnused(layouts);
 	return true;
 #else
-	if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo()
-		&& layouts.getMainInputChannelSet() != juce::AudioChannelSet::mono())
+	if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
 		return false;
 
 #if !JucePlugin_IsSynth
@@ -62,7 +67,11 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 // === Process Audio ==========================================================
 void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-	juce::ignoreUnused(sampleRate, samplesPerBlock);
+	juce::ignoreUnused(samplesPerBlock);
+	lastSampleRate = sampleRate;
+	float maxSecondsDelay = (maxIntervals + 1) * (maxDelayTime / 1000);
+	leftBuffer.resize(sampleRate, maxSecondsDelay);
+	rightBuffer.resize(sampleRate, maxSecondsDelay);
 }
 
 void PluginProcessor::releaseResources() { }
@@ -74,14 +83,22 @@ void PluginProcessor::processBlock
 	auto numInputChannels = getTotalNumInputChannels();
 	auto numOutputChannels = getTotalNumOutputChannels();
 	// zeroes out any unused outputs (if there are any)
-	for (auto i = numInputChannels; i < numOutputChannels; i++)
+	for (auto i = numInputChannels;i < numOutputChannels;i++)
 		buffer.clear(i, 0, buffer.getNumSamples());
 	// process each channel of the audio
-	for (int channel = 0; channel < numInputChannels; ++channel)
+	size_t numSamples = (size_t) buffer.getNumSamples();
+	size_t delay = getDelaySamples();
+	for (int channel = 0;channel < numInputChannels;channel++)
 	{
-		auto *channelData = buffer.getWritePointer(channel);
-		juce::ignoreUnused(channelData);
-		// process the audio
+		float* channelData = buffer.getWritePointer(channel);
+		CircularBuffer* circ = channel == 0 ? &leftBuffer : &rightBuffer;
+		// for (size_t i = 0;i < numSamples;i++)
+		// {
+		// 	circ->addSample(channelData[i]);
+		// 	channelData[i] += circ->getSampleDelayed(delay);
+		// }
+		circ->addSamples(channelData, numSamples);
+		circ->sumWithSamplesDelayed(delay, channelData, numSamples);
 	}
 }
 
@@ -111,3 +128,10 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes)
 		tree.replaceState(juce::ValueTree::fromXml(*xml));
 }
 
+
+// === Private Helper =========================================================
+size_t PluginProcessor::getDelaySamples()
+{
+	float ms = *tree.getRawParameterValue("delay-time");
+	return (size_t) (lastSampleRate * ms / 1000);
+}

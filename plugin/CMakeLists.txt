@@ -16,6 +16,7 @@ juce_add_plugin(
 target_sources(
     ${PROJECT_NAME}
     PRIVATE
+        source/dsp/CircularBuffer.cpp
         source/ui/CtmLookAndFeel.cpp
         source/ui/CtmSlider.cpp
         source/ui/SliderLabel.cpp
@@ -30,6 +31,7 @@ target_sources(
 target_include_directories(
     ${PROJECT_NAME}
     PRIVATE
+        include/dsp
         include/ui
         include/parameterControls
         include

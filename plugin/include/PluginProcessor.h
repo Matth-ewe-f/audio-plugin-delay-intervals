@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "CircularBuffer.h"
 
 class PluginProcessor final : public juce::AudioProcessor
 {
@@ -17,7 +18,7 @@ public:
         { return "Delay-Intervals"; }
 
     inline bool hasEditor() const override { return true; }
-    inline double getTailLengthSeconds() const override { return 0.0; }
+    inline double getTailLengthSeconds() const override { return 1.0; }
     
     inline int getNumPrograms() override { return 1; } // should always be >= 1
     inline int getCurrentProgram() override { return 0; }
@@ -66,8 +67,19 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
 
 private:
+    double lastSampleRate;
+    CircularBuffer leftBuffer;
+    CircularBuffer rightBuffer;
 #if PERFETTO
     std::unique_ptr<perfetto::TracingSession> tracingSession;
 #endif
+
+    // === Constants ==========================================================
+    static const float maxDelayTime;
+    static const int maxIntervals;
+
+    // === Private Helper =====================================================
+    size_t getDelaySamples();
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
 };
