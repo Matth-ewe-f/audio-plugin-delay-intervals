@@ -5,6 +5,16 @@
 namespace ParameterFactory
 {
 
+std::unique_ptr<juce::AudioParameterFloat> createBasicFloatParameter
+(std::string id, std::string name, float min, float max, float step,
+float skew, float defaultVal)
+{
+    juce::NormalisableRange<float> range(min, max, step, skew);
+    return std::make_unique<juce::AudioParameterFloat>(
+        id, name, range, defaultVal
+    );
+}
+
 std::unique_ptr<juce::AudioParameterFloat> createTimeParameter
 (std::string id, std::string name, float min, float max, float val)
 {

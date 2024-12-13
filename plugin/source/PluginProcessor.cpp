@@ -38,10 +38,45 @@ PluginProcessor::createParameters()
 	parameters.add(ParameterFactory::createTimeParameter(
 		"delay-time", "Delay Time", 20, maxDelayTime, 1, 100
 	));
-	// keep `maxIntervals` reflective of this parameter
 	parameters.add(ParameterFactory::createIntChoiceParameter(
-		"num-intervals", "Intervals", juce::Array<int>(8, 16, 32), 1
+		"num-intervals", "Intervals", juce::Array<int>(8, 16, maxIntervals), 1
 	));
+	// delay amplitudes
+	for (int i = 0;i < maxIntervals;i++)
+	{
+		std::string leftName;
+		std::string rightName;
+		float lDefault;
+		float rDefault;
+		if (i == 0)
+		{
+			leftName = "Pre-Repeat Amplitude L";
+			rightName = "Pre-Repeat Amplitude R";
+			lDefault = 1;
+			rDefault = 1;
+		}
+		else 
+		{
+			if (i < 10)
+			{
+				leftName = "Repeat 0" + std::to_string(i) + " Amplitude L";
+				rightName = "Repeat 0" + std::to_string(i) + " Amplitude R";
+			}
+			else
+			{
+				leftName = "Repeat " + std::to_string(i) + " Amplitude L";
+				rightName = "Repeat " + std::to_string(i) + " Amplitude R";
+			}
+			lDefault = 0;
+			rDefault = 0;
+		}
+		parameters.add(ParameterFactory::createBasicFloatParameter(
+			getIdForLeftIntervalParam(i), leftName, 0, 1, 0.01f, 1, lDefault
+		));
+		parameters.add(ParameterFactory::createBasicFloatParameter(
+			getIdForRightIntervalParam(i), rightName, 0, 1, 0.01f, 1, rDefault
+		));
+	}
 	return parameters;
 }
 
@@ -91,14 +126,27 @@ void PluginProcessor::processBlock
 	for (int channel = 0;channel < numInputChannels;channel++)
 	{
 		float* channelData = buffer.getWritePointer(channel);
-		CircularBuffer* circ = channel == 0 ? &leftBuffer : &rightBuffer;
-		// for (size_t i = 0;i < numSamples;i++)
-		// {
-		// 	circ->addSample(channelData[i]);
-		// 	channelData[i] += circ->getSampleDelayed(delay);
-		// }
+		CircularBuffer* circ;
+		float dryAmp;
+		float wetAmp;
+		if (channel == 0)
+		{
+			circ = &leftBuffer;
+			dryAmp = getAmplitudeForLeftInterval(0);
+			wetAmp = getAmplitudeForLeftInterval(1);
+		}
+		else
+		{
+			circ = &rightBuffer;
+			dryAmp = getAmplitudeForRightInterval(0);
+			wetAmp = getAmplitudeForRightInterval(1);
+		}
 		circ->addSamples(channelData, numSamples);
-		circ->sumWithSamplesDelayed(delay, channelData, numSamples);
+		for (size_t i = 0;i < numSamples;i++)
+		{
+			float delayed = circ->getSampleDelayed(delay + (numSamples - i));
+			channelData[i] = (channelData[i] * dryAmp) + (delayed * wetAmp);
+		}
 	}
 }
 
@@ -134,4 +182,14 @@ size_t PluginProcessor::getDelaySamples()
 {
 	float ms = *tree.getRawParameterValue("delay-time");
 	return (size_t) (lastSampleRate * ms / 1000);
+}
+
+float PluginProcessor::getAmplitudeForLeftInterval(int index)
+{
+	return *tree.getRawParameterValue(getIdForLeftIntervalParam(index));
+}
+
+float PluginProcessor::getAmplitudeForRightInterval(int index)
+{
+	return *tree.getRawParameterValue(getIdForRightIntervalParam(index));
 }

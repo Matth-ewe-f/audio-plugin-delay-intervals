@@ -65,6 +65,12 @@ public:
 
     // === Factory Functions ==================================================
     juce::AudioProcessorEditor* createEditor() override;
+    
+    // === Parameter Information ==============================================
+    inline std::string getIdForLeftIntervalParam(int index)
+        { return "left-delay" + std::to_string(index); }
+    inline std::string getIdForRightIntervalParam(int index)
+        { return "right-delay-" + std::to_string(index); }
 
 private:
     double lastSampleRate;
@@ -80,6 +86,8 @@ private:
 
     // === Private Helper =====================================================
     size_t getDelaySamples();
+    float getAmplitudeForLeftInterval(int index); // 0th interval is dry signal
+    float getAmplitudeForRightInterval(int index);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
 };
