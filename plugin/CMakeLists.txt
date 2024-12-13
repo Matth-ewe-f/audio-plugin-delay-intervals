@@ -17,6 +17,7 @@ target_sources(
     ${PROJECT_NAME}
     PRIVATE
         source/dsp/CircularBuffer.cpp
+        source/dsp/DelayAmp.cpp
         source/ui/CtmLookAndFeel.cpp
         source/ui/CtmSlider.cpp
         source/ui/SliderLabel.cpp

@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "CircularBuffer.h"
+#include "DelayAmp.h"
 
 class PluginProcessor final : public juce::AudioProcessor
 {
@@ -75,7 +76,9 @@ public:
 private:
     double lastSampleRate;
     CircularBuffer leftBuffer;
+    DelayAmp leftAmps[32];
     CircularBuffer rightBuffer;
+    DelayAmp rightAmps[32];
 #if PERFETTO
     std::unique_ptr<perfetto::TracingSession> tracingSession;
 #endif

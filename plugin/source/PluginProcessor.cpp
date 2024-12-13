@@ -22,6 +22,11 @@ PluginProcessor::PluginProcessor()
 #if PERFETTO
     MelatoninPerfetto::get().beginSession();
 #endif
+	for (int i = 0;i < maxIntervals;i++)
+	{
+		leftAmps[i].listenTo(&tree, getIdForLeftIntervalAmp(i));
+		rightAmps[i].listenTo(&tree, getIdForRightIntervalAmp(i));
+	}
 }
 
 PluginProcessor::~PluginProcessor()
@@ -107,6 +112,11 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 	float maxSecondsDelay = (maxIntervals + 1) * (maxDelayTime / 1000);
 	leftBuffer.resize(sampleRate, maxSecondsDelay);
 	rightBuffer.resize(sampleRate, maxSecondsDelay);
+	for (int i = 0;i < maxIntervals;i++)
+	{
+		leftAmps[i].smoothAmplitude.reset(samplesPerBlock);
+		rightAmps[i].smoothAmplitude.reset(samplesPerBlock);
+	}
 }
 
 void PluginProcessor::releaseResources() { }
@@ -126,34 +136,30 @@ void PluginProcessor::processBlock
 	for (int channel = 0;channel < numInputChannels;channel++)
 	{
 		float* channelData = buffer.getWritePointer(channel);
-		CircularBuffer* circ;
-		float dryAmp;
-		if (channel == 0)
-		{
-			circ = &leftBuffer;
-			dryAmp = getAmplitudeForLeftInterval(0);
-		}
-		else
-		{
-			circ = &rightBuffer;
-			dryAmp = getAmplitudeForRightInterval(0);
-		}
+		CircularBuffer* circ = channel == 0 ? &leftBuffer : & rightBuffer;
 		circ->addSamples(channelData, numSamples);
 		for (size_t i = 0;i < numSamples;i++)
-			channelData[i] *= dryAmp;
+		{
+			float amp;
+			if (channel == 0)
+				amp = getAmplitudeForLeftInterval(0);
+			else
+				amp = getAmplitudeForRightInterval(0);
+			channelData[i] *= amp;
+		}
 		int curIntervals = getCurrentNumIntervals();
 		for (int interval = 1;interval < curIntervals;interval++)
 		{
-			float wetAmp;
-			if (channel == 0)
-				wetAmp = getAmplitudeForLeftInterval(interval);
-			else
-				wetAmp = getAmplitudeForRightInterval(interval);
 			for (size_t j = 0;j < numSamples;j++)
 			{
+				float amp;
+				if (channel == 0)
+					amp = getAmplitudeForLeftInterval(interval);
+				else
+					amp = getAmplitudeForRightInterval(interval);
 				size_t d = (delay * (size_t) interval) + (numSamples - j);
 				float delayedSample = circ->getSampleDelayed(d);
-				channelData[j] += delayedSample * wetAmp;
+				channelData[j] += delayedSample * amp;
 			}
 		}
 	}
@@ -208,10 +214,10 @@ int PluginProcessor::getCurrentNumIntervals()
 
 float PluginProcessor::getAmplitudeForLeftInterval(int index)
 {
-	return *tree.getRawParameterValue(getIdForLeftIntervalAmp(index));
+	return leftAmps[index].smoothAmplitude.getNextValue();
 }
 
 float PluginProcessor::getAmplitudeForRightInterval(int index)
 {
-	return *tree.getRawParameterValue(getIdForRightIntervalAmp(index));
+	return rightAmps[index].smoothAmplitude.getNextValue();
 }
