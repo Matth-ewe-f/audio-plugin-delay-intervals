@@ -5,11 +5,20 @@
 namespace ParameterFactory
 {
 
-std::unique_ptr<juce::AudioParameterFloat> createBasicFloatParameter
-(std::string id, std::string name, float min, float max, float step,
-float skew, float defaultVal)
+std::unique_ptr<juce::AudioParameterFloat> createDelayAmpParameter
+(std::string id, std::string name, float defaultVal)
 {
-    juce::NormalisableRange<float> range(min, max, step, skew);
+    auto normalize = [] (float min, float max, float value)
+    {
+        juce::ignoreUnused(min, max);
+        return juce::jmax(0.0f, 1.75f - (1.3022f / (value + 0.7363f)));
+    };
+    auto denormalize = [] (float min, float max, float value)
+    {
+        juce::ignoreUnused(min, max);
+        return value <= 0 ? 0 : (1.3022f / (1.75f - value)) - 0.7363f;
+    };
+    juce::NormalisableRange<float> range(0, 1, denormalize, normalize);
     return std::make_unique<juce::AudioParameterFloat>(
         id, name, range, defaultVal
     );

@@ -104,7 +104,7 @@ void PluginEditor::setupChannels()
     {
         leftDelayAmps[i].setShowLabel(false);
         leftDelayAmps[i].setSliderStyle(juce::Slider::LinearBarVertical);
-        std::string id = processorRef.getIdForLeftIntervalParam(i);
+        std::string id = processorRef.getIdForLeftIntervalAmp(i);
         leftDelayAmps[i].attachToParameter(&processorRef.tree, id);
         addParameterControl(&leftDelayAmps[i]);
     }
@@ -112,7 +112,7 @@ void PluginEditor::setupChannels()
     {
         rightDelayAmps[i].setShowLabel(false);
         rightDelayAmps[i].setSliderStyle(juce::Slider::LinearBarVertical);
-        std::string id = processorRef.getIdForRightIntervalParam(i);
+        std::string id = processorRef.getIdForRightIntervalAmp(i);
         rightDelayAmps[i].attachToParameter(&processorRef.tree, id);
         addParameterControl(&rightDelayAmps[i]);
     }

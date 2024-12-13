@@ -70,11 +70,11 @@ PluginProcessor::createParameters()
 			lDefault = 0;
 			rDefault = 0;
 		}
-		parameters.add(ParameterFactory::createBasicFloatParameter(
-			getIdForLeftIntervalParam(i), leftName, 0, 1, 0.01f, 1, lDefault
+		parameters.add(ParameterFactory::createDelayAmpParameter(
+			getIdForLeftIntervalAmp(i), leftName, lDefault
 		));
-		parameters.add(ParameterFactory::createBasicFloatParameter(
-			getIdForRightIntervalParam(i), rightName, 0, 1, 0.01f, 1, rDefault
+		parameters.add(ParameterFactory::createDelayAmpParameter(
+			getIdForRightIntervalAmp(i), rightName, rDefault
 		));
 	}
 	return parameters;
@@ -128,24 +128,33 @@ void PluginProcessor::processBlock
 		float* channelData = buffer.getWritePointer(channel);
 		CircularBuffer* circ;
 		float dryAmp;
-		float wetAmp;
 		if (channel == 0)
 		{
 			circ = &leftBuffer;
 			dryAmp = getAmplitudeForLeftInterval(0);
-			wetAmp = getAmplitudeForLeftInterval(1);
 		}
 		else
 		{
 			circ = &rightBuffer;
 			dryAmp = getAmplitudeForRightInterval(0);
-			wetAmp = getAmplitudeForRightInterval(1);
 		}
 		circ->addSamples(channelData, numSamples);
 		for (size_t i = 0;i < numSamples;i++)
+			channelData[i] *= dryAmp;
+		int curIntervals = getCurrentNumIntervals();
+		for (int interval = 1;interval < curIntervals;interval++)
 		{
-			float delayed = circ->getSampleDelayed(delay + (numSamples - i));
-			channelData[i] = (channelData[i] * dryAmp) + (delayed * wetAmp);
+			float wetAmp;
+			if (channel == 0)
+				wetAmp = getAmplitudeForLeftInterval(interval);
+			else
+				wetAmp = getAmplitudeForRightInterval(interval);
+			for (size_t j = 0;j < numSamples;j++)
+			{
+				size_t d = (delay * (size_t) interval) + (numSamples - j);
+				float delayedSample = circ->getSampleDelayed(d);
+				channelData[j] += delayedSample * wetAmp;
+			}
 		}
 	}
 }
@@ -184,12 +193,25 @@ size_t PluginProcessor::getDelaySamples()
 	return (size_t) (lastSampleRate * ms / 1000);
 }
 
+int PluginProcessor::getCurrentNumIntervals()
+{
+	int value = (int) *tree.getRawParameterValue("num-intervals");
+	if (value == 0)
+		return 8;
+	else if (value == 1)
+		return 16;
+	else if (value == 2)
+		return 32;
+	else
+		return 0;
+}
+
 float PluginProcessor::getAmplitudeForLeftInterval(int index)
 {
-	return *tree.getRawParameterValue(getIdForLeftIntervalParam(index));
+	return *tree.getRawParameterValue(getIdForLeftIntervalAmp(index));
 }
 
 float PluginProcessor::getAmplitudeForRightInterval(int index)
 {
-	return *tree.getRawParameterValue(getIdForRightIntervalParam(index));
+	return *tree.getRawParameterValue(getIdForRightIntervalAmp(index));
 }

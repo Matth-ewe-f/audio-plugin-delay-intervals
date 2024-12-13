@@ -67,9 +67,9 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
     
     // === Parameter Information ==============================================
-    inline std::string getIdForLeftIntervalParam(int index)
+    inline std::string getIdForLeftIntervalAmp(int index)
         { return "left-delay" + std::to_string(index); }
-    inline std::string getIdForRightIntervalParam(int index)
+    inline std::string getIdForRightIntervalAmp(int index)
         { return "right-delay-" + std::to_string(index); }
 
 private:
@@ -86,6 +86,7 @@ private:
 
     // === Private Helper =====================================================
     size_t getDelaySamples();
+    int getCurrentNumIntervals();
     float getAmplitudeForLeftInterval(int index); // 0th interval is dry signal
     float getAmplitudeForRightInterval(int index);
 
