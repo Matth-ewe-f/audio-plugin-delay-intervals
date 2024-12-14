@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include <algorithm>
 #include "PluginEditor.h"
 #include "ParameterFactory.h"
 
@@ -17,7 +18,8 @@ PluginProcessor::PluginProcessor()
 #endif
 	),
 	tree(*this, nullptr, "PARAMETERS", createParameters()),
-	lastSampleRate(44100)
+	lastSampleRate(44100),
+	lastDelay(LONG_MAX)
 {
 #if PERFETTO
     MelatoninPerfetto::get().beginSession();
@@ -109,7 +111,8 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
 	juce::ignoreUnused(samplesPerBlock);
 	lastSampleRate = sampleRate;
-	float maxSecondsDelay = (maxIntervals + 1) * (maxDelayTime / 1000);
+	lastDelay = LONG_MAX;
+	float maxSecondsDelay = (maxIntervals + 1) * (maxDelayTime / 1000.0f);
 	leftBuffer.resize(sampleRate, maxSecondsDelay);
 	rightBuffer.resize(sampleRate, maxSecondsDelay);
 	for (int i = 0;i < maxIntervals;i++)
@@ -133,6 +136,14 @@ void PluginProcessor::processBlock
 	// process each channel of the audio
 	size_t numSamples = (size_t) buffer.getNumSamples();
 	size_t delay = getDelaySamples();
+	if (delay != lastDelay && lastDelay != LONG_MAX)
+	{
+		size_t lengthPre = lastDelay * (maxIntervals + 1);
+		size_t lengthPost = delay * (maxIntervals + 1);
+		leftBuffer.resample(lengthPre, lengthPost);
+		DBG(std::to_string(lengthPre) + " -> " + std::to_string(lengthPost));
+		rightBuffer.resample(lengthPre, lengthPost);
+	}
 	for (int channel = 0;channel < numInputChannels;channel++)
 	{
 		float* channelData = buffer.getWritePointer(channel);
@@ -163,6 +174,7 @@ void PluginProcessor::processBlock
 			}
 		}
 	}
+	lastDelay = delay;
 }
 
 // === Factory Functions ======================================================

@@ -1,5 +1,7 @@
 #pragma once
 #include <vector>
+#include <mutex>
+#include <juce_audio_processors/juce_audio_processors.h>
 
 class CircularBuffer
 {
@@ -19,7 +21,18 @@ public:
     void clear();
     void resize(size_t newLength);
     void resize(double sampleRate, float maxDelaySeconds);
+    void resample(size_t lengthPre, size_t lengthPost);
+
 private:
     std::vector<float> buffer;
     size_t leastRecentSample;
+    juce::WindowedSincInterpolator resampler;
+    std::vector<float> resampleBuffer;
+    std::mutex mutex;
+
+    static const size_t resamplingSize;
+
+    // === Private Helper =====================================================
+    void shiftDataToBufferEdge();
+    void resizePrivate(size_t newLength);
 };

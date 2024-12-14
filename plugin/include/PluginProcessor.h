@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "CircularBuffer.h"
 #include "DelayAmp.h"
@@ -75,6 +76,7 @@ public:
 
 private:
     double lastSampleRate;
+    size_t lastDelay;
     CircularBuffer leftBuffer;
     DelayAmp leftAmps[32];
     CircularBuffer rightBuffer;
