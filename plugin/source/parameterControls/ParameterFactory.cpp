@@ -5,6 +5,28 @@
 namespace ParameterFactory
 {
 
+std::unique_ptr<juce::AudioParameterFloat> createPercentageParameter
+(std::string id, std::string name, float defaultVal)
+{
+    juce::AudioParameterFloatAttributes attr;
+    attr = attr.withStringFromValueFunction([] (float value, int len) 
+    {
+        juce::ignoreUnused(len);
+        return std::format("{:.1f}", value) + "%";
+    });
+    attr = attr.withValueFromStringFunction([] (const juce::String& text)
+    {
+        juce::String s = text.trim();
+        if (s.endsWith("%"))
+            s = s.substring(0, s.length() - 1).trim();
+        return attemptStringConvert(s, 0);
+    });
+    juce::NormalisableRange<float> range(0, 100, 0.1f);
+    return std::make_unique<juce::AudioParameterFloat>(
+        id, name, range, defaultVal, attr
+    );
+}
+
 std::unique_ptr<juce::AudioParameterFloat> createDelayAmpParameter
 (std::string id, std::string name, float defaultVal)
 {
@@ -47,7 +69,6 @@ std::unique_ptr<juce::AudioParameterFloat> createTimeParameter
     });
     attr = attr.withValueFromStringFunction([] (const juce::String& text)
     {
-        float result = 0; // default value if conversion fails
         juce::String s = text.trim();
         // check for units
         bool seconds = false;
@@ -60,23 +81,8 @@ std::unique_ptr<juce::AudioParameterFloat> createTimeParameter
             s = s.substring(0, s.length() - 1).trim();
             seconds = true;
         }
-        // attempt conversion
-        try
-        {
-            size_t len;
-            float attempt = std::stof(s.toStdString(), &len);
-            if (*(s.toStdString().c_str() + len) == '\0')
-            {
-                result = attempt;
-                if (seconds)
-                    result *= 1000;
-            }
-        }
-        catch (...)
-        {
-            // no handling necessary, just return result with default value
-        }
-        return result;
+        float result = attemptStringConvert(s, 0);
+        return seconds ? result * 1000 : result;
     });
     juce::NormalisableRange<float> range(min, max, step);
     return std::make_unique<juce::AudioParameterFloat>(
@@ -124,6 +130,26 @@ std::unique_ptr<juce::AudioParameterChoice> createIntChoiceParameter
     return std::make_unique<juce::AudioParameterChoice>(
         id, name, strOptions, defaultIndex, attr
     );
+}
+
+
+float attemptStringConvert(const juce::String& text, float valueOnFailure)
+{
+    try
+    {
+        juce::String s = text.trim();
+        size_t len;
+        float attempt = std::stof(s.toStdString(), &len);
+        if (*(s.toStdString().c_str() + len) == '\0')
+            return attempt;
+        else
+            return valueOnFailure;
+    }
+    catch (...)
+    {
+        // no handling necessary, just return failure value
+        return valueOnFailure;
+    }
 }
 
 }

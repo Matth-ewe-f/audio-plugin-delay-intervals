@@ -4,6 +4,9 @@
 namespace ParameterFactory
 {
 
+std::unique_ptr<juce::AudioParameterFloat> createPercentageParameter
+(std::string id, std::string name, float defaultVal);
+
 std::unique_ptr<juce::AudioParameterFloat> createDelayAmpParameter
 (std::string id, std::string name, float defaultVal);
 
@@ -16,5 +19,7 @@ float defaultVal);
 
 std::unique_ptr<juce::AudioParameterChoice> createIntChoiceParameter
 (std::string id, std::string name, juce::Array<int> options, int defaultIndex);
+
+float attemptStringConvert(const juce::String& text, float valueOnFailure);
 
 }

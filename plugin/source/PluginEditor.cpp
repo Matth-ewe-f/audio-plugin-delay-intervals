@@ -125,6 +125,7 @@ void PluginEditor::setupRightSideGlobals()
     addParameterControl(&falloff);
     wetDry.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
     wetDry.setTitleText("Mix");
+    wetDry.attachToParameter(&processorRef.tree, "dry-wet");
     addParameterControl(&wetDry);
 }
 

@@ -47,6 +47,9 @@ PluginProcessor::createParameters()
 	parameters.add(ParameterFactory::createIntChoiceParameter(
 		"num-intervals", "Intervals", juce::Array<int>(8, 16, maxIntervals), 1
 	));
+	parameters.add(ParameterFactory::createPercentageParameter(
+		"dry-wet", "Dry/Wet", 50
+	));
 	// delay amplitudes
 	for (int i = 0;i < maxIntervals;i++)
 	{
