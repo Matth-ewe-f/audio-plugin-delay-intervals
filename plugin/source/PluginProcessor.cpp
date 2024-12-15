@@ -28,6 +28,7 @@ PluginProcessor::PluginProcessor()
 		leftAmps[i].listenTo(&tree, getIdForLeftIntervalAmp(i));
 		rightAmps[i].listenTo(&tree, getIdForRightIntervalAmp(i));
 	}
+	tree.addParameterListener("falloff", this);
 }
 
 PluginProcessor::~PluginProcessor()
@@ -49,6 +50,9 @@ PluginProcessor::createParameters()
 	));
 	parameters.add(ParameterFactory::createPercentageParameter(
 		"dry-wet", "Dry/Wet", 50
+	));
+	parameters.add(ParameterFactory::createPercentageParameter(
+		"falloff", "Auto-Falloff", 0
 	));
 	// delay amplitudes
 	for (int i = 0;i < maxIntervals;i++)
@@ -118,8 +122,8 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 	rightBuffer.resize(sampleRate, maxSecondsDelay);
 	for (int i = 0;i < maxIntervals;i++)
 	{
-		leftAmps[i].smoothAmplitude.reset(samplesPerBlock);
-		rightAmps[i].smoothAmplitude.reset(samplesPerBlock);
+		leftAmps[i].reset(samplesPerBlock);
+		rightAmps[i].reset(samplesPerBlock);
 	}
 	lastDelay = getDelaySamples();
 	lastDryWet = *tree.getRawParameterValue("dry-wet") / 100;
@@ -164,10 +168,11 @@ void PluginProcessor::processBlock
 		for (size_t i = 0;i < numSamples;i++)
 		{
 			float amp;
+			// this needs to happen every sample for smoothing to work
 			if (channel == 0)
-				amp = getAmplitudeForLeftInterval(0);
+				amp = leftAmps[0].getAmplitude();
 			else
-				amp = getAmplitudeForRightInterval(0);
+				amp = rightAmps[0].getAmplitude();
 			// apply dry/wet (with smoothing if it's changed)
 			if (!juce::approximatelyEqual(lastDryWet, dryWet))
 			{
@@ -190,10 +195,11 @@ void PluginProcessor::processBlock
 			for (size_t j = 0;j < numSamples;j++)
 			{
 				float amp;
+				// this needs to happen every sample for smoothing to work
 				if (channel == 0)
-					amp = getAmplitudeForLeftInterval(interval);
+					amp = leftAmps[interval].getAmplitude();
 				else
-					amp = getAmplitudeForRightInterval(interval);
+					amp = rightAmps[interval].getAmplitude();
 				// apply dry-wet (with smoothing if it's changed)
 				if (!juce::approximatelyEqual(lastDryWet, dryWet))
 				{
@@ -254,6 +260,16 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes)
 		tree.replaceState(juce::ValueTree::fromXml(*xml));
 }
 
+void PluginProcessor::parameterChanged(const juce::String& param, float value)
+{
+	juce::ignoreUnused(param);
+	for (int i = 0;i < maxIntervals;i++)
+	{
+		leftAmps[i].setFalloffValue(pow(1 - (value / 100), (float) i));
+		rightAmps[i].setFalloffValue(pow(1 - (value / 100), (float) i));
+	}
+}
+
 // === Private Helper =========================================================
 size_t PluginProcessor::getDelaySamples()
 {
@@ -272,14 +288,4 @@ int PluginProcessor::getCurrentNumIntervals()
 		return 32;
 	else
 		return 0;
-}
-
-float PluginProcessor::getAmplitudeForLeftInterval(int index)
-{
-	return leftAmps[index].smoothAmplitude.getNextValue();
-}
-
-float PluginProcessor::getAmplitudeForRightInterval(int index)
-{
-	return rightAmps[index].smoothAmplitude.getNextValue();
 }

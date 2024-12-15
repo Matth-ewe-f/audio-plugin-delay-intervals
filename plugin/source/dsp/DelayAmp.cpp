@@ -20,3 +20,19 @@ void DelayAmp::parameterChanged(const juce::String& param, float value)
     juce::ignoreUnused(param);
     smoothAmplitude.setTargetValue(value);
 }
+
+void DelayAmp::setFalloffValue(float value)
+{
+    smoothFalloffValue.setTargetValue(value);
+}
+
+float DelayAmp::getAmplitude()
+{
+    return smoothAmplitude.getNextValue() * smoothFalloffValue.getNextValue();
+}
+
+void DelayAmp::reset(int samplesPerBlock)
+{
+    smoothAmplitude.reset(samplesPerBlock);
+    smoothFalloffValue.reset(samplesPerBlock);
+}

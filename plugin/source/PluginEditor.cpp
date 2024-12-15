@@ -124,6 +124,7 @@ void PluginEditor::setupRightSideGlobals()
 {
     falloff.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
     falloff.setTitleText("Auto-Falloff");
+    falloff.attachToParameter(&processorRef.tree, "falloff");
     addParameterControl(&falloff);
     wetDry.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
     wetDry.setTitleText("Mix");

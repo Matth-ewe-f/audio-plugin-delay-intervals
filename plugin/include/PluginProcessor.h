@@ -4,7 +4,9 @@
 #include "CircularBuffer.h"
 #include "DelayAmp.h"
 
-class PluginProcessor final : public juce::AudioProcessor
+class PluginProcessor final :
+    public juce::AudioProcessor,
+    public juce::AudioProcessorValueTreeState::Listener
 {
 public:
     // === Public Variables ===================================================
@@ -64,6 +66,7 @@ public:
     // === State ==============================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+    void parameterChanged(const juce::String&, float) override;
 
     // === Factory Functions ==================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -94,8 +97,6 @@ private:
     // === Private Helper =====================================================
     size_t getDelaySamples();
     int getCurrentNumIntervals();
-    float getAmplitudeForLeftInterval(int index); // 0th interval is dry signal
-    float getAmplitudeForRightInterval(int index);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
 };
