@@ -78,6 +78,7 @@ private:
     double lastSampleRate;
     size_t lastDelay;
     bool lastBlockDelayChange;
+    float lastDryWet;
     CircularBuffer leftBuffer;
     DelayAmp leftAmps[32];
     CircularBuffer rightBuffer;

@@ -121,6 +121,8 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 		leftAmps[i].smoothAmplitude.reset(samplesPerBlock);
 		rightAmps[i].smoothAmplitude.reset(samplesPerBlock);
 	}
+	lastDelay = getDelaySamples();
+	lastDryWet = *tree.getRawParameterValue("dry-wet") / 100;
 }
 
 void PluginProcessor::releaseResources() { }
@@ -138,6 +140,7 @@ void PluginProcessor::processBlock
 	size_t numSamples = (size_t) buffer.getNumSamples();
 	size_t delay = getDelaySamples();
 	bool delayChanged = delay != lastDelay && lastDelay != LONG_MAX;
+	float dryWet = *tree.getRawParameterValue("dry-wet") / 100;
 	for (int channel = 0;channel < numInputChannels;channel++)
 	{
 		float* channelData = buffer.getWritePointer(channel);
@@ -165,6 +168,16 @@ void PluginProcessor::processBlock
 				amp = getAmplitudeForLeftInterval(0);
 			else
 				amp = getAmplitudeForRightInterval(0);
+			// apply dry/wet (with smoothing if it's changed)
+			if (!juce::approximatelyEqual(lastDryWet, dryWet))
+			{
+				float p = (i + 1) / (float) numSamples;
+				amp *= 1 - ((lastDryWet * (1 - p)) + (dryWet * p));
+			}
+			else
+			{
+				amp *= 1 - dryWet;
+			}
 			channelData[i] *= amp;
 		}
 		// if the delays have been faded out for a delay change, skip them
@@ -181,6 +194,16 @@ void PluginProcessor::processBlock
 					amp = getAmplitudeForLeftInterval(interval);
 				else
 					amp = getAmplitudeForRightInterval(interval);
+				// apply dry-wet (with smoothing if it's changed)
+				if (!juce::approximatelyEqual(lastDryWet, dryWet))
+				{
+					float p = (j + 1) / (float) numSamples;
+					amp *= (lastDryWet * (1 - p)) + (dryWet * p);
+				}
+				else
+				{
+					amp *= dryWet;
+				}
 				size_t d = delayChanged ? lastDelay : delay;
 				size_t s = (d * (size_t) interval) + (numSamples - j);
 				float delayedSample = circ->getSampleDelayed(s);
@@ -202,6 +225,7 @@ void PluginProcessor::processBlock
 	}
 	lastBlockDelayChange = delayChanged;
 	lastDelay = delay;
+	lastDryWet = dryWet;
 }
 
 // === Factory Functions ======================================================
@@ -229,7 +253,6 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes)
 	if (xml.get() != nullptr && xml->hasTagName(tree.state.getType()))
 		tree.replaceState(juce::ValueTree::fromXml(*xml));
 }
-
 
 // === Private Helper =========================================================
 size_t PluginProcessor::getDelaySamples()
