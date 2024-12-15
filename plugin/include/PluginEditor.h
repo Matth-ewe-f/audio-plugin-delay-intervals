@@ -44,7 +44,8 @@ private:
     int leftDelayAmpsLength = 32;
     ParameterControl rightDelayAmps[32];
     int rightDelayAmpsLength = 32;
-    int numDelayAmps; // will become a parameter after layout is finished
+    int numDelayAmps;
+    float dryWetRatio;
     // === Global Controls (Right Side) =======================================
     ParameterControl falloff;
     ParameterControl wetDry;

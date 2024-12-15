@@ -139,9 +139,9 @@ void CtmLookAndFeel::drawLinearSliderBar
 {
     // draw background
     g.setColour(slider.findColour(CtmColourIds::BarBackColourId));
-    g.fillRoundedRectangle(x, y, w, h, juce::jmin(w / 4, 6));
+    g.fillRoundedRectangle(x, y, w, h, juce::jmin(w / 4, h / 2, 6));
     // draw fill
     g.reduceClipRegion(x, (int)p, w, h - (int)(p - y));
     g.setColour(slider.findColour(CtmColourIds::meterFillColourId));
-    g.fillRoundedRectangle(x, y, w, h, juce::jmin(w / 4, 6));
+    g.fillRoundedRectangle(x, y, w, h, juce::jmin(w / 4, h / 2, 6));
 }

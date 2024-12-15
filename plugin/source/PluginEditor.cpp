@@ -29,6 +29,7 @@ PluginEditor::PluginEditor (PluginProcessor &p)
     setWantsKeyboardFocus(true);
     setLookAndFeel(&lookAndFeel);
     processorRef.tree.addParameterListener("num-intervals", this);
+    processorRef.tree.addParameterListener("dry-wet", this);
     // setup components
     setupLeftSideGlobals();
     setupChannels();
@@ -63,9 +64,10 @@ void PluginEditor::setupLeftSideGlobals()
 
 void PluginEditor::setupChannels()
 {
-    // get the number of delay amplitude sliders to show
+    // get processor parameters that influence layout
     int n = (int)*processorRef.tree.getRawParameterValue("num-intervals");
     numDelayAmps = n == 0 ? 8 : (n == 1 ? 16 : 32);
+    dryWetRatio = *processorRef.tree.getRawParameterValue("dry-wet") / 100;
     // setup filter controls
     leftFilterFirstLow.setTitleText("Low");
     leftFilterFirstLow.label.setPostfix(" Hz");
@@ -168,6 +170,8 @@ void PluginEditor::parameterChanged(const juce::String& param, float value)
     int v = (int) value;
     if (param.compare("num-intervals") == 0)
         numDelayAmps = v == 0 ? 8 : (v == 1 ? 16 : 32);
+    if (param.compare("dry-wet") == 0)
+        dryWetRatio = value / 100;
     triggerAsyncUpdate();
 }
 
@@ -221,18 +225,18 @@ void PluginEditor::layoutChannelFilters()
 void PluginEditor::layoutDelayAmps()
 {
     // calculate the dimensions and shared positions
-    int pad;
-    if (numDelayAmps == 8)
-        pad = 4;
-    else if (numDelayAmps == 16)
-        pad = 2;
-    else
-        pad = 1;
+    int pad = 32 / numDelayAmps;
     int leftY = (getHeight() / 2) - delayAmpsAreaHeight + delayAmpsMarginY;
     int rightY = (getHeight() / 2) + 3;
     int ampsUsableW = col2Width - (2 * col2Margin) - delayAmpsMarginX;
     int w = (ampsUsableW / numDelayAmps) - pad;
-    int h = delayAmpsAreaHeight - delayAmpsMarginY - 3;
+    int fullH = delayAmpsAreaHeight - delayAmpsMarginY - 3;
+    // compress function for mapping dry/wet to slider height a little
+    float a = 0.06f;
+    a -= (numDelayAmps / 8) * 0.01f;
+    if (numDelayAmps == 32)
+        a += 0.01f;
+    float r = (1 - 2 * a) * dryWetRatio + a;
     // layout as many sliders as are necessary
     for (int i = 0;i < numDelayAmps;i++)
     {
@@ -240,8 +244,15 @@ void PluginEditor::layoutDelayAmps()
         if (numDelayAmps == 8)
             startX -= 2;
         int offsetX = (w + pad) * i;
-        leftDelayAmps[i].setBounds(startX + offsetX, leftY, w, h);
-        rightDelayAmps[i].setBounds(startX + offsetX, rightY, w, h);
+        int x = startX + offsetX;
+        int h;
+        // scale heights by the dry-wet ratio
+        if (i == 0)
+            h = (int) std::round(fullH * juce::jmin((1 - r) * 2, 1.0f));
+        else
+            h = (int) std::round(fullH * juce::jmin(r * 2, 1.0f));
+        leftDelayAmps[i].setBounds(x, leftY + (fullH - h), w, h);
+        rightDelayAmps[i].setBounds(x, rightY + (fullH - h), w, h);
     }
     // hide any other sliders
     for (int i = numDelayAmps;i < leftDelayAmpsLength;i++)
