@@ -17,7 +17,8 @@ PluginProcessor::PluginProcessor()
 #endif
 	),
 	tree(*this, nullptr, "PARAMETERS", createParameters()),
-	lastSampleRate(44100)
+	lastSampleRate(44100),
+	lastDelay(LONG_MAX)
 {
 #if PERFETTO
     MelatoninPerfetto::get().beginSession();
@@ -133,11 +134,27 @@ void PluginProcessor::processBlock
 	// process each channel of the audio
 	size_t numSamples = (size_t) buffer.getNumSamples();
 	size_t delay = getDelaySamples();
+	bool delayChanged = delay != lastDelay && lastDelay != LONG_MAX;
 	for (int channel = 0;channel < numInputChannels;channel++)
 	{
 		float* channelData = buffer.getWritePointer(channel);
-		CircularBuffer* circ = channel == 0 ? &leftBuffer : & rightBuffer;
-		circ->addSamples(channelData, numSamples);
+		CircularBuffer* circ = channel == 0 ? &leftBuffer : &rightBuffer;
+		// add dry signal to delay buffer
+		// if delay just stopped changing, fade the samples in (because the
+		// delays would have been muted for a delay change)
+		if (!lastBlockDelayChange)
+		{
+			circ->addSamples(channelData, numSamples);
+		}
+		else if (!delayChanged)
+		{
+			for (size_t i = 0;i < numSamples;i++)
+			{
+				float amp = (i + 1) / (float) numSamples;
+				circ->addSample(channelData[i] * amp);
+			}
+		}
+		// output dry signal
 		for (size_t i = 0;i < numSamples;i++)
 		{
 			float amp;
@@ -147,6 +164,10 @@ void PluginProcessor::processBlock
 				amp = getAmplitudeForRightInterval(0);
 			channelData[i] *= amp;
 		}
+		// if the delays have been faded out for a delay change, skip them
+		if (delayChanged && lastBlockDelayChange)
+			continue;
+		// output each delay interval, scaled by its amplitude
 		int curIntervals = getCurrentNumIntervals();
 		for (int interval = 1;interval < curIntervals;interval++)
 		{
@@ -157,12 +178,27 @@ void PluginProcessor::processBlock
 					amp = getAmplitudeForLeftInterval(interval);
 				else
 					amp = getAmplitudeForRightInterval(interval);
-				size_t d = (delay * (size_t) interval) + (numSamples - j);
-				float delayedSample = circ->getSampleDelayed(d);
+				size_t d = delayChanged ? lastDelay : delay;
+				size_t s = (d * (size_t) interval) + (numSamples - j);
+				float delayedSample = circ->getSampleDelayed(s);
+				// if the delay value is changing, fade out the delays
+				if (delayChanged)
+					delayedSample *= (numSamples - j - 1) / (float) numSamples;
+				// if the delay value stopped changing, fade in the delays
+				// reaching this line implies delayChanged = false
+				if (lastBlockDelayChange)
+					delayedSample *= (j + 1) / (float) numSamples;
 				channelData[j] += delayedSample * amp;
 			}
 		}
+		// if the delay value has changed, clear the buffer
+		if (delayChanged)
+		{
+			circ->clear();
+		}
 	}
+	lastBlockDelayChange = delayChanged;
+	lastDelay = delay;
 }
 
 // === Factory Functions ======================================================

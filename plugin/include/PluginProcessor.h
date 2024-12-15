@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <melatonin_perfetto/melatonin_perfetto.h>
 #include "CircularBuffer.h"
 #include "DelayAmp.h"
 
@@ -75,6 +76,8 @@ public:
 
 private:
     double lastSampleRate;
+    size_t lastDelay;
+    bool lastBlockDelayChange;
     CircularBuffer leftBuffer;
     DelayAmp leftAmps[32];
     CircularBuffer rightBuffer;
