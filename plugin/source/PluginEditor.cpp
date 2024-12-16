@@ -30,6 +30,7 @@ PluginEditor::PluginEditor (PluginProcessor &p)
     setLookAndFeel(&lookAndFeel);
     processorRef.tree.addParameterListener("num-intervals", this);
     processorRef.tree.addParameterListener("dry-wet", this);
+    processorRef.tree.addParameterListener("falloff", this);
     // setup components
     setupLeftSideGlobals();
     setupChannels();
@@ -67,7 +68,9 @@ void PluginEditor::setupChannels()
     // get processor parameters that influence layout
     int n = (int)*processorRef.tree.getRawParameterValue("num-intervals");
     numDelayAmps = n == 0 ? 8 : (n == 1 ? 16 : 32);
-    dryWetRatio = *processorRef.tree.getRawParameterValue("dry-wet") / 100;
+    wetRatio = *processorRef.tree.getRawParameterValue("dry-wet") / 100;
+    float f = *processorRef.tree.getRawParameterValue("falloff");
+    autoFalloffRate = 1 - (f / 100);
     // setup filter controls
     leftFilterFirstLow.setTitleText("Low");
     leftFilterFirstLow.label.setPostfix(" Hz");
@@ -172,7 +175,9 @@ void PluginEditor::parameterChanged(const juce::String& param, float value)
     if (param.compare("num-intervals") == 0)
         numDelayAmps = v == 0 ? 8 : (v == 1 ? 16 : 32);
     if (param.compare("dry-wet") == 0)
-        dryWetRatio = value / 100;
+        wetRatio = value / 100;
+    if (param.compare("falloff") == 0)
+        autoFalloffRate = 1 - (value / 100);
     triggerAsyncUpdate();
 }
 
@@ -232,12 +237,12 @@ void PluginEditor::layoutDelayAmps()
     int ampsUsableW = col2Width - (2 * col2Margin) - delayAmpsMarginX;
     int w = (ampsUsableW / numDelayAmps) - pad;
     int fullH = delayAmpsAreaHeight - delayAmpsMarginY - 3;
-    // compress function for mapping dry/wet to slider height a little
-    float a = 0.06f;
-    a -= (numDelayAmps / 8) * 0.01f;
-    if (numDelayAmps == 32)
-        a += 0.01f;
-    float r = (1 - 2 * a) * dryWetRatio + a;
+    // create parameters for amplitude to slider height map function
+    // parameters are for y = a * sqrt(x + 0.02) - b, w points (0, c), (1, 1)
+    // I think the above function looks nice!
+    float c = numDelayAmps == 8 ? 0.1f : (numDelayAmps == 16 ? 0.075f : 0.06f);
+    float a = (1 - c) / 0.87f;
+    float b = 0.162f - 1.17f * c;
     // layout as many sliders as are necessary
     for (int i = 0;i < numDelayAmps;i++)
     {
@@ -246,12 +251,13 @@ void PluginEditor::layoutDelayAmps()
             startX -= 2;
         int offsetX = (w + pad) * i;
         int x = startX + offsetX;
-        int h;
-        // scale heights by the dry-wet ratio
-        if (i == 0)
-            h = (int) std::round(fullH * juce::jmin((1 - r) * 2, 1.0f));
-        else
-            h = (int) std::round(fullH * juce::jmin(r * 2, 1.0f));
+        // scale heights by the dry-wet ratio and auto-falloff
+        float p = juce::jmin((i == 0 ? 1 - wetRatio : wetRatio) * 2, 1.0f);
+        p *= pow(autoFalloffRate, (float) i);
+        // denormalize the amplitude-to-height mapping a bit for visual appeal
+        // uses function described in comment where a and b are defined
+        int h = (int) std::round(fullH * (a * pow(p + 0.02f, 0.5f) - b));
+        // set the heights
         leftDelayAmps[i].setBounds(x, leftY + (fullH - h), w, h);
         rightDelayAmps[i].setBounds(x, rightY + (fullH - h), w, h);
     }

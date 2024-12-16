@@ -45,7 +45,8 @@ private:
     ParameterControl rightDelayAmps[32];
     int rightDelayAmpsLength = 32;
     int numDelayAmps;
-    float dryWetRatio;
+    float wetRatio;
+    float autoFalloffRate;
     // === Global Controls (Right Side) =======================================
     ParameterControl falloff;
     ParameterControl wetDry;
