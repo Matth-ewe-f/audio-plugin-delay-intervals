@@ -13,7 +13,6 @@ public:
     void addSamples(const float* samples, size_t length);
     float getSampleDelayed(size_t delay);
     void getSamplesDelayed(size_t delay, float* output, size_t length);
-    void sumWithSamplesDelayed(size_t delay, float* samples, size_t length);
 
     // === Other Operations ===================================================
     void clear();
@@ -22,4 +21,5 @@ public:
 private:
     std::vector<float> buffer;
     size_t leastRecentSample;
+    size_t numSamples;
 };

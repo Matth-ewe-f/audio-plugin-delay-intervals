@@ -31,6 +31,7 @@ private:
     ParameterToggle noTempoSync;
     ParameterToggle tempoSync;
     ParameterControl numIntervals;
+    ParameterToggle loopButton;
     // === Channel Controls ===================================================
     ParameterControl leftFilterFirstLow;
     ParameterControl leftFilterFirstHigh;
@@ -55,10 +56,10 @@ private:
     static const int col1Width;
     static const int col1KnobW;
     static const int col1KnobH;
-    static const int col1ToggleW;
-    static const int col1ToggleH;
-    static const int col1TogglePadX;
-    static const int col1TogglePadY;
+    static const int toggleW;
+    static const int toggleH;
+    static const int togglePadX;
+    static const int togglePadY;
     static const int col2Width;
     static const int col2Margin;
     static const int delayAmpsAreaHeight;

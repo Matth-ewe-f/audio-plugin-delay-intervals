@@ -5,10 +5,10 @@
 const int PluginEditor::col1Width = 112;
 const int PluginEditor::col1KnobW = 72;
 const int PluginEditor::col1KnobH = 80;
-const int PluginEditor::col1ToggleW = 34;
-const int PluginEditor::col1ToggleH = 22;
-const int PluginEditor::col1TogglePadX = 2;
-const int PluginEditor::col1TogglePadY = 8;
+const int PluginEditor::toggleW = 34;
+const int PluginEditor::toggleH = 22;
+const int PluginEditor::togglePadX = 2;
+const int PluginEditor::togglePadY = 8;
 const int PluginEditor::col2Width = 411;
 const int PluginEditor::col2Margin = 16;
 const int PluginEditor::delayAmpsAreaHeight = 64;
@@ -61,6 +61,9 @@ void PluginEditor::setupLeftSideGlobals()
     numIntervals.setSliderStyle(juce::Slider::RotaryVerticalDrag);
     numIntervals.setTitleText("Intervals");
     addParameterControl(&numIntervals);
+    loopButton.toggle.setText("LOOP");
+    loopButton.attachToParameter(&processorRef.tree, "loop");
+    addAndMakeVisible(&loopButton.toggle);
 }
 
 void PluginEditor::setupChannels()
@@ -190,18 +193,24 @@ void PluginEditor::handleAsyncUpdate()
 // === Layout Functions =======================================================
 void PluginEditor::layoutLeftSideGlobals()
 {
+    // delay time controls
     int halfHeight = (getHeight() - (paddingY * 2)) / 2;
-    int delaySectionH = col1KnobH + col1TogglePadY + col1ToggleH;
+    int delaySectionH = col1KnobH + togglePadY + toggleH;
     int delaySectionY = paddingY + 2 * ((halfHeight - delaySectionH) / 3);
     int x = (col1Width - col1KnobW) / 2;
     delayTime.setBounds(x, delaySectionY, col1KnobW, col1KnobH);
-    int toggleX = (col1Width - (col1ToggleW * 2) - col1TogglePadX) / 2;
-    int toggleY = delaySectionY + col1KnobH + col1TogglePadY;
-    noTempoSync.setBounds(toggleX, toggleY, col1ToggleW, col1ToggleH);
-    int toggleX2 = toggleX + col1ToggleW + col1TogglePadX;
-    tempoSync.setBounds(toggleX2, toggleY, col1ToggleW, col1ToggleH);
-    int intervalsY = paddingY + halfHeight + ((halfHeight - col1KnobH) / 3);
+    int noTempoX = (col1Width - (toggleW * 2) - togglePadX) / 2;
+    int delayToggleY = delaySectionY + col1KnobH + togglePadY;
+    noTempoSync.setBounds(noTempoX, delayToggleY, toggleW, toggleH);
+    int tempoX = noTempoX + toggleW + togglePadX;
+    tempoSync.setBounds(tempoX, delayToggleY, toggleW, toggleH);
+    // number of intervals controls
+    int intervalsH = col1KnobH + togglePadY + toggleH;
+    int intervalsY = paddingY + halfHeight + ((halfHeight - intervalsH) / 3);
     numIntervals.setBounds(x, intervalsY, col1KnobW, col1KnobH);
+    int loopX = (col1Width - toggleW) / 2;
+    int loopY = intervalsY + col1KnobH + togglePadY;
+    loopButton.setBounds(loopX, loopY, toggleW, toggleH);
 }
 
 void PluginEditor::layoutChannelFilters()
@@ -283,11 +292,15 @@ void PluginEditor::drawLeftSideGlobals(juce::Graphics& g)
 {
     // draw background for delay time controls area
     g.setColour(findColour(CtmColourIds::darkBgColourId));
-    int x = (col1Width - (col1ToggleW * 2) - col1TogglePadX) / 2;
-    int w = (col1ToggleW * 2) + col1TogglePadX;
-    int h = col1KnobH + col1TogglePadY + col1ToggleH;
-    int y = paddingY + 2 * ((((getHeight() - (paddingY * 2)) / 2) - h) / 3);
+    int x = (col1Width - (toggleW * 2) - togglePadX) / 2;
+    int w = (toggleW * 2) + togglePadX;
+    int h = col1KnobH + togglePadY + toggleH;
+    int halfHeight = (getHeight() - (paddingY * 2)) / 2;
+    int y = paddingY + 2 * ((halfHeight - h) / 3);
     g.fillRoundedRectangle(x - 6, y - 6, w + 12, h + 12, 12);
+    // draw background for number of intervals controls area
+    int y2 = paddingY + halfHeight + ((halfHeight - h) / 3);
+    g.fillRoundedRectangle(x - 6, y2 - 6, w + 12, h + 12, 12);
 }
 
 void PluginEditor::drawChannels(juce::Graphics& g)

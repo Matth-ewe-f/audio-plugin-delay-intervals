@@ -4,9 +4,7 @@
 #include "CircularBuffer.h"
 #include "DelayAmp.h"
 
-class PluginProcessor final :
-    public juce::AudioProcessor,
-    public juce::AudioProcessorValueTreeState::Listener
+class PluginProcessor final : public juce::AudioProcessor
 {
 public:
     // === Public Variables ===================================================
@@ -66,7 +64,6 @@ public:
     // === State ==============================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
-    void parameterChanged(const juce::String&, float) override;
 
     // === Factory Functions ==================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -80,12 +77,14 @@ public:
 private:
     double lastSampleRate;
     size_t lastDelay;
-    bool lastBlockDelayChange;
+    bool lastBlockDelayChanged;
     float lastDryWet;
-    CircularBuffer leftBuffer;
+    float lastFalloff;
+    bool lastLoop;
     DelayAmp leftAmps[32];
-    CircularBuffer rightBuffer;
+    CircularBuffer leftDelays[32];
     DelayAmp rightAmps[32];
+    CircularBuffer rightDelays[32];
 #if PERFETTO
     std::unique_ptr<perfetto::TracingSession> tracingSession;
 #endif
@@ -96,7 +95,7 @@ private:
 
     // === Private Helper =====================================================
     size_t getDelaySamples();
-    int getCurrentNumIntervals();
+    size_t getCurrentNumIntervals();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
 };

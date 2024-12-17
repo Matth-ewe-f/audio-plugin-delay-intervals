@@ -1,9 +1,31 @@
 #include "ParameterFactory.h"
+#include <algorithm>
 #include <format>
 #include <functional>
 
 namespace ParameterFactory
 {
+
+std::unique_ptr<juce::AudioParameterChoice> createBoolParameter
+(std::string id, std::string name, std::string onText, std::string offText,
+float defaultVal)
+{
+    juce::AudioParameterChoiceAttributes attr;
+    attr = attr.withStringFromValueFunction([onText, offText] (float v, int l)
+    {
+        juce::ignoreUnused(l);
+        return v <= 0 ? offText : onText;
+    });
+    attr = attr.withValueFromStringFunction([onText] (const juce::String& text)
+    {
+        juce::String compare(onText);
+        compare = compare.toLowerCase().trim();
+        return text.toLowerCase().trim().compare(compare) == 0;
+    });
+    return std::make_unique<juce::AudioParameterChoice>(
+        id, name, juce::StringArray(onText, offText), defaultVal, attr
+    );
+}
 
 std::unique_ptr<juce::AudioParameterFloat> createPercentageParameter
 (std::string id, std::string name, float defaultVal)
@@ -33,7 +55,7 @@ std::unique_ptr<juce::AudioParameterFloat> createDelayAmpParameter
     auto normalize = [] (float min, float max, float value)
     {
         juce::ignoreUnused(min, max);
-        return juce::jmax(0.0f, 1.75f - (1.3022f / (value + 0.7363f)));
+        return juce::jmax(0.0f, 1.749f - (1.3022f / (value + 0.7363f)));
     };
     auto denormalize = [] (float min, float max, float value)
     {

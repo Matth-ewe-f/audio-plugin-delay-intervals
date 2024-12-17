@@ -17,8 +17,7 @@ PluginProcessor::PluginProcessor()
 #endif
 	),
 	tree(*this, nullptr, "PARAMETERS", createParameters()),
-	lastSampleRate(44100),
-	lastDelay(LONG_MAX)
+	lastSampleRate(44100)
 {
 #if PERFETTO
     MelatoninPerfetto::get().beginSession();
@@ -28,7 +27,11 @@ PluginProcessor::PluginProcessor()
 		leftAmps[i].listenTo(&tree, getIdForLeftIntervalAmp(i));
 		rightAmps[i].listenTo(&tree, getIdForRightIntervalAmp(i));
 	}
-	tree.addParameterListener("falloff", this);
+	lastDelay = getDelaySamples();
+	lastBlockDelayChanged = false;
+	lastDryWet = *tree.getRawParameterValue("dry-wet") / 100;
+	lastFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
+	lastLoop = *tree.getRawParameterValue("loop") >= 1;
 }
 
 PluginProcessor::~PluginProcessor()
@@ -47,6 +50,9 @@ PluginProcessor::createParameters()
 	));
 	parameters.add(ParameterFactory::createIntChoiceParameter(
 		"num-intervals", "Intervals", juce::Array<int>(8, 16, maxIntervals), 1
+	));
+	parameters.add(ParameterFactory::createBoolParameter(
+		"loop", "Loop", "ON", "OFF", 0
 	));
 	parameters.add(ParameterFactory::createPercentageParameter(
 		"dry-wet", "Dry/Wet", 50
@@ -117,16 +123,24 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
 	juce::ignoreUnused(samplesPerBlock);
 	lastSampleRate = sampleRate;
-	float maxSecondsDelay = (maxIntervals + 1) * (maxDelayTime / 1000);
-	leftBuffer.resize(sampleRate, maxSecondsDelay);
-	rightBuffer.resize(sampleRate, maxSecondsDelay);
 	for (int i = 0;i < maxIntervals;i++)
 	{
 		leftAmps[i].reset(samplesPerBlock);
+		leftDelays[i].resize(sampleRate, (maxDelayTime / 1000) + 0.01f);
 		rightAmps[i].reset(samplesPerBlock);
+		rightDelays[i].resize(sampleRate, (maxDelayTime / 1000) + 0.01f);
 	}
 	lastDelay = getDelaySamples();
+	lastBlockDelayChanged = false;
+	// smoothDryWet.reset(samplesPerBlock);
+	// float dryWet = *tree.getRawParameterValue("dry-wet") / 100;
+	// smoothDryWet.setCurrentAndTargetValue(dryWet);
+	// smoothFalloff.reset(samplesPerBlock);
+	// float falloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
+	// smoothFalloff.setCurrentAndTargetValue(falloff);
 	lastDryWet = *tree.getRawParameterValue("dry-wet") / 100;
+	lastFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
+	lastLoop = *tree.getRawParameterValue("loop") >= 1;
 }
 
 void PluginProcessor::releaseResources() { }
@@ -134,104 +148,115 @@ void PluginProcessor::releaseResources() { }
 void PluginProcessor::processBlock
 (juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages)
 {
-	juce::ignoreUnused(midiMessages);
+	TRACE_DSP();
+	juce::ignoreUnused(midiMessages); // not a midi plugin
 	auto numInputChannels = getTotalNumInputChannels();
 	auto numOutputChannels = getTotalNumOutputChannels();
 	// zeroes out any unused outputs (if there are any)
 	for (auto i = numInputChannels;i < numOutputChannels;i++)
 		buffer.clear(i, 0, buffer.getNumSamples());
-	// process each channel of the audio
+	// get parameters by which to process the audio
 	size_t numSamples = (size_t) buffer.getNumSamples();
-	size_t delay = getDelaySamples();
-	bool delayChanged = delay != lastDelay && lastDelay != LONG_MAX;
-	float dryWet = *tree.getRawParameterValue("dry-wet") / 100;
+	size_t curDelay = getDelaySamples();
+	bool delayChanged = curDelay != lastDelay && lastDelay != LONG_MAX;
+	size_t delay = delayChanged ? lastDelay : curDelay;
+	float curDryWet = *tree.getRawParameterValue("dry-wet") / 100;
+	float curFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
+	bool loop = *tree.getRawParameterValue("loop") >= 1;
+	// process each channel
 	for (int channel = 0;channel < numInputChannels;channel++)
 	{
+		// get parameters by which to process the channel
 		float* channelData = buffer.getWritePointer(channel);
-		CircularBuffer* circ = channel == 0 ? &leftBuffer : &rightBuffer;
-		// add dry signal to delay buffer
-		// if delay just stopped changing, fade the samples in (because the
-		// delays would have been muted for a delay change)
-		if (!lastBlockDelayChange)
-		{
-			circ->addSamples(channelData, numSamples);
-		}
-		else if (!delayChanged)
-		{
-			for (size_t i = 0;i < numSamples;i++)
-			{
-				float amp = (i + 1) / (float) numSamples;
-				circ->addSample(channelData[i] * amp);
-			}
-		}
-		// output dry signal
+		DelayAmp* amplitudes = channel == 0 ? leftAmps : rightAmps;
+		CircularBuffer* intervals = channel == 0 ? leftDelays : rightDelays;
+		float dryWet = lastDryWet;
+		float dryWetSetp = (curDryWet - lastDryWet) / numSamples;
+		float falloff = lastFalloff;
+		float falloffStep = (curFalloff - lastFalloff) / numSamples;
+		size_t curIntervals = getCurrentNumIntervals();
+		// process each sample
 		for (size_t i = 0;i < numSamples;i++)
 		{
-			float amp;
-			// this needs to happen every sample for smoothing to work
-			if (channel == 0)
-				amp = leftAmps[0].getAmplitude();
-			else
-				amp = rightAmps[0].getAmplitude();
-			// apply dry/wet (with smoothing if it's changed)
-			if (!juce::approximatelyEqual(lastDryWet, dryWet))
+			float drySample = channelData[i];
+			// add the dry signal to the output
+			dryWet += dryWetSetp;
+			channelData[i] *= (1 - dryWet) * amplitudes[0].getAmplitude();
+			// if the delay value is changing, skip processing the delays
+			if (delayChanged && lastBlockDelayChanged)
+				continue;
+			// smooth values by by which to adjust the samples
+			falloff += falloffStep;
+			float fade = 1;
+			if (delayChanged)
+				fade = (numSamples - i - 1) / (float) numSamples;
+			else if (lastBlockDelayChanged)
+				fade = (i + 1) / (float) numSamples;
+			// add each delay intervals next sample to the output, in reverse
+			// order so each interval adds its samples to the output before
+			// recieving new samples
+			for (size_t j = curIntervals - 1;j <= 1000;j--)
 			{
-				float p = (i + 1) / (float) numSamples;
-				amp *= 1 - ((lastDryWet * (1 - p)) + (dryWet * p));
-			}
-			else
-			{
-				amp *= 1 - dryWet;
-			}
-			channelData[i] *= amp;
-		}
-		// if the delays have been faded out for a delay change, skip them
-		if (delayChanged && lastBlockDelayChange)
-			continue;
-		// output each delay interval, scaled by its amplitude
-		int curIntervals = getCurrentNumIntervals();
-		for (int interval = 1;interval < curIntervals;interval++)
-		{
-			for (size_t j = 0;j < numSamples;j++)
-			{
-				float amp;
-				// this needs to happen every sample for smoothing to work
-				if (channel == 0)
-					amp = leftAmps[interval].getAmplitude();
-				else
-					amp = rightAmps[interval].getAmplitude();
-				// apply dry-wet (with smoothing if it's changed)
-				if (!juce::approximatelyEqual(lastDryWet, dryWet))
-				{
-					float p = (j + 1) / (float) numSamples;
-					amp *= (lastDryWet * (1 - p)) + (dryWet * p);
-				}
-				else
-				{
-					amp *= dryWet;
-				}
-				size_t d = delayChanged ? lastDelay : delay;
-				size_t s = (d * (size_t) interval) + (numSamples - j);
-				float delayedSample = circ->getSampleDelayed(s);
-				// if the delay value is changing, fade out the delays
+				// add the sample to the output
+				CircularBuffer* interval = &intervals[j];
+				float sample = interval->getSampleDelayed(delay);
+				float amp = amplitudes[j].getAmplitude();
+				float processedSample = sample * dryWet * falloff * amp;
 				if (delayChanged)
-					delayedSample *= (numSamples - j - 1) / (float) numSamples;
-				// if the delay value stopped changing, fade in the delays
-				// reaching this line implies delayChanged = false
-				if (lastBlockDelayChange)
-					delayedSample *= (j + 1) / (float) numSamples;
-				channelData[j] += delayedSample * amp;
+					processedSample *= fade;
+				channelData[i] += processedSample;
+				// add the sample to the subsequent delay interval's buffer
+				if (j == 0)
+				{
+					CircularBuffer* next = &intervals[1];
+					float sampleForNext = (sample * falloff) + drySample;
+					if (lastBlockDelayChanged) // implies !delayChanged
+						sampleForNext *= fade;
+					next->addSample(sampleForNext);
+				}
+				else if (j != curIntervals - 1)
+				{
+					CircularBuffer* next = &intervals[(j + 1) % curIntervals];
+					float sampleForNext = sample * falloff;
+					if (lastBlockDelayChanged) // implies !delayChanged
+						sampleForNext *= fade;
+					next->addSample(sampleForNext);
+				}
+			}
+			// loop samples from the last delay interval to the first
+			if (loop || lastLoop)
+			{
+				size_t last = curIntervals - 1;
+				float sample = intervals[last].getSampleDelayed(delay);
+				float loopFade;
+				if (loop && lastLoop)
+					loopFade = 1;
+				else if (!lastLoop)
+					loopFade = (i + 1) / (float) numSamples;
+				else
+					loopFade = (numSamples - i - 1) / (float) numSamples;
+				intervals[0].addSample(sample * falloff * loopFade);
+			}
+			else
+			{
+				intervals[0].addSample(0);
 			}
 		}
-		// if the delay value has changed, clear the buffer
-		if (delayChanged)
+		// if the delay value is changing, zero out delay interval buffers
+		if (delayChanged && !lastBlockDelayChanged)
 		{
-			circ->clear();
+			for (size_t i = 0;i < maxIntervals;i++)
+			{
+				intervals[i].clear();
+			}
 		}
 	}
-	lastBlockDelayChange = delayChanged;
-	lastDelay = delay;
-	lastDryWet = dryWet;
+	// save parameters to compare with next block
+	lastDelay = curDelay;
+	lastBlockDelayChanged = delayChanged;
+	lastDryWet = curDryWet;
+	lastFalloff = curFalloff;
+	lastLoop = loop;
 }
 
 // === Factory Functions ======================================================
@@ -260,16 +285,6 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes)
 		tree.replaceState(juce::ValueTree::fromXml(*xml));
 }
 
-void PluginProcessor::parameterChanged(const juce::String& param, float value)
-{
-	juce::ignoreUnused(param);
-	for (int i = 0;i < maxIntervals;i++)
-	{
-		leftAmps[i].setFalloffValue(pow(1 - (value / 100), (float) i));
-		rightAmps[i].setFalloffValue(pow(1 - (value / 100), (float) i));
-	}
-}
-
 // === Private Helper =========================================================
 size_t PluginProcessor::getDelaySamples()
 {
@@ -277,15 +292,15 @@ size_t PluginProcessor::getDelaySamples()
 	return (size_t) (lastSampleRate * ms / 1000);
 }
 
-int PluginProcessor::getCurrentNumIntervals()
+size_t PluginProcessor::getCurrentNumIntervals()
 {
 	int value = (int) *tree.getRawParameterValue("num-intervals");
 	if (value == 0)
-		return 8;
+		return 8UL;
 	else if (value == 1)
-		return 16;
+		return 16UL;
 	else if (value == 2)
-		return 32;
+		return 32UL;
 	else
-		return 0;
+		return 0UL;
 }
