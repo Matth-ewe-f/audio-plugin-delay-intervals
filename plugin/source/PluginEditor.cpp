@@ -44,6 +44,7 @@ PluginEditor::PluginEditor (PluginProcessor &p)
 PluginEditor::~PluginEditor()
 {
     processorRef.tree.removeParameterListener("num-intervals", this);
+    setLookAndFeel(nullptr);
 }
 
 // === Initialization Functions ===============================================
