@@ -3,6 +3,7 @@
 #include <melatonin_perfetto/melatonin_perfetto.h>
 #include "CircularBuffer.h"
 #include "DelayAmp.h"
+#include "DelayInterval.h"
 
 class PluginProcessor final : public juce::AudioProcessor
 {
@@ -82,9 +83,9 @@ private:
     float lastFalloff;
     bool lastLoop;
     DelayAmp leftAmps[32];
-    CircularBuffer leftDelays[32];
+    DelayInterval leftDelays[32];
     DelayAmp rightAmps[32];
-    CircularBuffer rightDelays[32];
+    DelayInterval rightDelays[32];
 #if PERFETTO
     std::unique_ptr<perfetto::TracingSession> tracingSession;
 #endif

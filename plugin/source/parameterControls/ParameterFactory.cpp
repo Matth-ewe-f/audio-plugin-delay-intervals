@@ -49,6 +49,69 @@ std::unique_ptr<juce::AudioParameterFloat> createPercentageParameter
     );
 }
 
+// warning can safely be ignored - float comparison involving no arithmetic
+// is perfectly safe
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+std::unique_ptr<juce::AudioParameterFloat> createFreqParameter
+(std::string id, std::string name, float defaultVal)
+{
+    juce::AudioParameterFloatAttributes attr;
+    attr = attr.withStringFromValueFunction([] (float value, int len)
+    {
+        juce::ignoreUnused(len);
+        if (value >= 1000)
+            return std::format("{:.1f}", value / 1000) + " kHz";
+        else if (value >= 100)
+            return std::format("{:.0f}", value) + " Hz";
+        else
+            return std::format("{:.01f}", value) + " Hz";
+    });
+    attr = attr.withValueFromStringFunction(
+        [defaultVal] (const juce::String& text)
+        {
+            juce::String s = text.trim();
+            if (s.endsWithIgnoreCase("Hz"))
+                s = s.substring(0, s.length() - 2).trim();
+            bool k = false;
+            if (s.endsWithIgnoreCase("k"))
+            {
+                k = true;
+                s = s.substring(0, s.length() - 1).trim();
+            }
+            float result = attemptStringConvert(s, -1);
+            if (result == -1)
+                return defaultVal;
+            else
+                return k ? result * 1000 : result;
+        }
+    );
+    juce::NormalisableRange<float> range(
+        20,
+        20000,
+        // denormalization function
+        [] (float min, float max, float value)
+        {
+            return min * pow(2.0f, value * log2(max / min));
+        },
+        // normalization function
+        [] (float min, float max, float value)
+        {
+            return log2(value / min) / log2(max / min);
+        },
+        // snap function
+        [] (float min, float max, float value)
+        {
+            juce::ignoreUnused(min, max);
+            return std::round(value * 10.0f) / 10.0f;
+        }
+    );
+    return std::make_unique<juce::AudioParameterFloat>(
+        id, name, range, defaultVal, attr
+    );
+}
+#pragma GCC diagnostic pop
+
 std::unique_ptr<juce::AudioParameterFloat> createDelayAmpParameter
 (std::string id, std::string name, float defaultVal)
 {

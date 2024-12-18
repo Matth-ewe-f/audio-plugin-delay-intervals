@@ -18,6 +18,7 @@ target_sources(
     PRIVATE
         source/dsp/CircularBuffer.cpp
         source/dsp/DelayAmp.cpp
+        source/dsp/Filter.cpp
         source/ui/CtmLookAndFeel.cpp
         source/ui/CtmSlider.cpp
         source/ui/SliderLabel.cpp

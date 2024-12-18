@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include <juce_dsp/juce_dsp.h>
 #include "PluginEditor.h"
 #include "ParameterFactory.h"
 
@@ -32,6 +33,13 @@ PluginProcessor::PluginProcessor()
 	lastDryWet = *tree.getRawParameterValue("dry-wet") / 100;
 	lastFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
 	lastLoop = *tree.getRawParameterValue("loop") >= 1;
+	for (size_t i = 0;i < maxIntervals;i++)
+	{
+		Filter* left = &leftDelays[i].filter;
+		left->attachToParameters(&tree, "left-high-pass", "left-low-pass");
+		Filter* right = &rightDelays[i].filter;
+		right->attachToParameters(&tree, "right-high-pass", "right-low-pass");
+	}
 }
 
 PluginProcessor::~PluginProcessor()
@@ -59,6 +67,18 @@ PluginProcessor::createParameters()
 	));
 	parameters.add(ParameterFactory::createPercentageParameter(
 		"falloff", "Auto-Falloff", 0
+	));
+	parameters.add(ParameterFactory::createFreqParameter(
+		"left-high-pass", "Filter Left Low", 20
+	));
+	parameters.add(ParameterFactory::createFreqParameter(
+		"left-low-pass", "Filter Left High", 20000
+	));
+	parameters.add(ParameterFactory::createFreqParameter(
+		"right-high-pass", "Filter Right Low", 20
+	));
+	parameters.add(ParameterFactory::createFreqParameter(
+		"right-low-pass", "Filter Right High", 20000
 	));
 	// delay amplitudes
 	for (int i = 0;i < maxIntervals;i++)
@@ -121,23 +141,26 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 // === Process Audio ==========================================================
 void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-	juce::ignoreUnused(samplesPerBlock);
 	lastSampleRate = sampleRate;
+	// spec for filters
+	juce::dsp::ProcessSpec spec;
+	spec.sampleRate = sampleRate;
+	spec.maximumBlockSize = (unsigned) samplesPerBlock;
+	spec.numChannels = (unsigned) getTotalNumOutputChannels();
+	// prepare delay intervals
 	for (int i = 0;i < maxIntervals;i++)
 	{
 		leftAmps[i].reset(samplesPerBlock);
-		leftDelays[i].resize(sampleRate, (maxDelayTime / 1000) + 0.01f);
 		rightAmps[i].reset(samplesPerBlock);
-		rightDelays[i].resize(sampleRate, (maxDelayTime / 1000) + 0.01f);
+		float seconds = (maxDelayTime / 1000) + 0.01f;
+		leftDelays[i].buffer.resize(sampleRate, seconds);
+		leftDelays[i].filter.prepare(spec);
+		rightDelays[i].buffer.resize(sampleRate, seconds);
+		rightDelays[i].filter.prepare(spec);
 	}
+	// prepare trackign of smoothed values
 	lastDelay = getDelaySamples();
 	lastBlockDelayChanged = false;
-	// smoothDryWet.reset(samplesPerBlock);
-	// float dryWet = *tree.getRawParameterValue("dry-wet") / 100;
-	// smoothDryWet.setCurrentAndTargetValue(dryWet);
-	// smoothFalloff.reset(samplesPerBlock);
-	// float falloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
-	// smoothFalloff.setCurrentAndTargetValue(falloff);
 	lastDryWet = *tree.getRawParameterValue("dry-wet") / 100;
 	lastFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
 	lastLoop = *tree.getRawParameterValue("loop") >= 1;
@@ -169,7 +192,8 @@ void PluginProcessor::processBlock
 		// get parameters by which to process the channel
 		float* channelData = buffer.getWritePointer(channel);
 		DelayAmp* amplitudes = channel == 0 ? leftAmps : rightAmps;
-		CircularBuffer* intervals = channel == 0 ? leftDelays : rightDelays;
+		DelayInterval* intervals = channel == 0 ? leftDelays : rightDelays;
+		// Filter* filter = channel == 0 ? &leftFilter : &rightFilter;
 		float dryWet = lastDryWet;
 		float dryWetSetp = (curDryWet - lastDryWet) / numSamples;
 		float falloff = lastFalloff;
@@ -198,8 +222,8 @@ void PluginProcessor::processBlock
 			for (size_t j = curIntervals - 1;j <= 1000;j--)
 			{
 				// add the sample to the output
-				CircularBuffer* interval = &intervals[j];
-				float sample = interval->getSampleDelayed(delay);
+				DelayInterval* interval = intervals + j;
+				float sample = interval->buffer.getSampleDelayed(delay);
 				float amp = amplitudes[j].getAmplitude();
 				float processedSample = sample * dryWet * falloff * amp;
 				if (delayChanged)
@@ -208,26 +232,31 @@ void PluginProcessor::processBlock
 				// add the sample to the subsequent delay interval's buffer
 				if (j == 0)
 				{
-					CircularBuffer* next = &intervals[1];
+					DelayInterval* next = intervals + 1;
+					// TODO apply first filter to drySample here
+					// TODO apply second filter to (sample * falloff) here
 					float sampleForNext = (sample * falloff) + drySample;
+					sampleForNext = next->filter.processSample(sampleForNext);
 					if (lastBlockDelayChanged) // implies !delayChanged
 						sampleForNext *= fade;
-					next->addSample(sampleForNext);
+					next->buffer.addSample(sampleForNext);
 				}
 				else if (j != curIntervals - 1)
 				{
-					CircularBuffer* next = &intervals[(j + 1) % curIntervals];
+					DelayInterval* next = (intervals + j + 1);
 					float sampleForNext = sample * falloff;
+					// TODO apply second filter to sampleForNext here
+					sampleForNext = next->filter.processSample(sampleForNext);
 					if (lastBlockDelayChanged) // implies !delayChanged
 						sampleForNext *= fade;
-					next->addSample(sampleForNext);
+					next->buffer.addSample(sampleForNext);
 				}
 			}
 			// loop samples from the last delay interval to the first
 			if (loop || lastLoop)
 			{
 				size_t last = curIntervals - 1;
-				float sample = intervals[last].getSampleDelayed(delay);
+				float sample = intervals[last].buffer.getSampleDelayed(delay);
 				float loopFade;
 				if (loop && lastLoop)
 					loopFade = 1;
@@ -235,11 +264,11 @@ void PluginProcessor::processBlock
 					loopFade = (i + 1) / (float) numSamples;
 				else
 					loopFade = (numSamples - i - 1) / (float) numSamples;
-				intervals[0].addSample(sample * falloff * loopFade);
+				intervals[0].buffer.addSample(sample * falloff * loopFade);
 			}
 			else
 			{
-				intervals[0].addSample(0);
+				intervals[0].buffer.addSample(0);
 			}
 		}
 		// if the delay value is changing, zero out delay interval buffers
@@ -247,7 +276,7 @@ void PluginProcessor::processBlock
 		{
 			for (size_t i = 0;i < maxIntervals;i++)
 			{
-				intervals[i].clear();
+				intervals[i].buffer.clear();
 			}
 		}
 	}

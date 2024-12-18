@@ -14,7 +14,7 @@ const int PluginEditor::col2Margin = 16;
 const int PluginEditor::delayAmpsAreaHeight = 64;
 const int PluginEditor::delayAmpsMarginX = 14;
 const int PluginEditor::delayAmpsMarginY = 12;
-const int PluginEditor::filterKnobW = 54;
+const int PluginEditor::filterKnobW = 58;
 const int PluginEditor::filterKnobH = 68;
 const int PluginEditor::col3Width = 112;
 const int PluginEditor::col3KnobW = 72;
@@ -68,11 +68,12 @@ void PluginEditor::setupLeftSideGlobals()
 
 void PluginEditor::setupChannels()
 {
+    juce::AudioProcessorValueTreeState* tree = &processorRef.tree;
     // get processor parameters that influence layout
-    int n = (int)*processorRef.tree.getRawParameterValue("num-intervals");
+    int n = (int)*tree->getRawParameterValue("num-intervals");
     numDelayAmps = n == 0 ? 8 : (n == 1 ? 16 : 32);
-    wetRatio = *processorRef.tree.getRawParameterValue("dry-wet") / 100;
-    float f = *processorRef.tree.getRawParameterValue("falloff");
+    wetRatio = *tree->getRawParameterValue("dry-wet") / 100;
+    float f = *tree->getRawParameterValue("falloff");
     autoFalloffRate = 1 - (f / 100);
     // setup filter controls
     leftFilterFirstLow.setTitleText("Low");
@@ -84,11 +85,11 @@ void PluginEditor::setupChannels()
     leftFilterFirstHigh.setTightText();
     addParameterControl(&leftFilterFirstHigh);
     leftFilterSecondLow.setTitleText("Low");
-    leftFilterSecondLow.label.setPostfix(" Hz");
+    leftFilterSecondLow.attachToParameter(tree, "left-high-pass");
     leftFilterSecondLow.setTightText();
     addParameterControl(&leftFilterSecondLow);
     leftFilterSecondHigh.setTitleText("High");
-    leftFilterSecondHigh.label.setPostfix(" Hz");
+    leftFilterSecondHigh.attachToParameter(tree, "left-low-pass");
     leftFilterSecondHigh.setTightText();
     addParameterControl(&leftFilterSecondHigh);
     rightFilterFirstLow.setTitleText("Low");
@@ -100,11 +101,11 @@ void PluginEditor::setupChannels()
     rightFilterFirstHigh.setTightText();
     addParameterControl(&rightFilterFirstHigh);
     rightFilterSecondLow.setTitleText("Low");
-    rightFilterSecondLow.label.setPostfix(" Hz");
+    rightFilterSecondLow.attachToParameter(tree, "right-high-pass");
     rightFilterSecondLow.setTightText();
     addParameterControl(&rightFilterSecondLow);
     rightFilterSecondHigh.setTitleText("High");
-    rightFilterSecondHigh.label.setPostfix(" Hz");
+    rightFilterSecondHigh.attachToParameter(tree, "right-low-pass");
     rightFilterSecondHigh.setTightText();
     addParameterControl(&rightFilterSecondHigh);
     // setup delay amplitude sliders
@@ -113,7 +114,7 @@ void PluginEditor::setupChannels()
         leftDelayAmps[i].setShowLabel(false);
         leftDelayAmps[i].setSliderStyle(juce::Slider::LinearBarVertical);
         std::string id = processorRef.getIdForLeftIntervalAmp(i);
-        leftDelayAmps[i].attachToParameter(&processorRef.tree, id);
+        leftDelayAmps[i].attachToParameter(tree, id);
         addParameterControl(&leftDelayAmps[i]);
     }
     for (int i = 0;i < rightDelayAmpsLength;i++)
@@ -121,7 +122,7 @@ void PluginEditor::setupChannels()
         rightDelayAmps[i].setShowLabel(false);
         rightDelayAmps[i].setSliderStyle(juce::Slider::LinearBarVertical);
         std::string id = processorRef.getIdForRightIntervalAmp(i);
-        rightDelayAmps[i].attachToParameter(&processorRef.tree, id);
+        rightDelayAmps[i].attachToParameter(tree, id);
         addParameterControl(&rightDelayAmps[i]);
     }
 }

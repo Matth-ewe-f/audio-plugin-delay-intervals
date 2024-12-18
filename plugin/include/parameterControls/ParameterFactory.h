@@ -11,6 +11,9 @@ float defaultVal);
 std::unique_ptr<juce::AudioParameterFloat> createPercentageParameter
 (std::string id, std::string name, float defaultVal);
 
+std::unique_ptr<juce::AudioParameterFloat> createFreqParameter
+(std::string id, std::string name, float defaultVal);
+
 std::unique_ptr<juce::AudioParameterFloat> createDelayAmpParameter
 (std::string id, std::string name, float defaultVal);
 
