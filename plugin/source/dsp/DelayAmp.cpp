@@ -10,7 +10,8 @@ void DelayAmp::listenTo
 {
     stateTree->addParameterListener(param, this);
     float value = *stateTree->getRawParameterValue(param);
-    smoothAmplitude.setCurrentAndTargetValue(value);
+    currentValue = value;
+    lastValue = value;
     tree = stateTree;
     parameterId = param;
 }
@@ -18,15 +19,22 @@ void DelayAmp::listenTo
 void DelayAmp::parameterChanged(const juce::String& param, float value)
 {
     juce::ignoreUnused(param);
-    smoothAmplitude.setTargetValue(value);
+    currentValue = value;
 }
 
-float DelayAmp::getAmplitude()
+float DelayAmp::getLastValue()
 {
-    return smoothAmplitude.getNextValue();
+    float result = lastValue;
+    lastValue = currentValue;
+    return result;
 }
 
-void DelayAmp::reset(int samplesPerBlock)
+float DelayAmp::getCurrentValue()
 {
-    smoothAmplitude.reset(samplesPerBlock);
+    return currentValue;
+}
+
+bool DelayAmp::hasNewValue()
+{
+    return !juce::approximatelyEqual(currentValue, lastValue);
 }

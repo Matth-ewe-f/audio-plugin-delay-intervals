@@ -41,10 +41,10 @@ private:
     ParameterControl rightFilterFirstHigh;
     ParameterControl rightFilterSecondLow;
     ParameterControl rightFilterSecondHigh;
-    ParameterControl leftDelayAmps[32];
-    int leftDelayAmpsLength = 32;
-    ParameterControl rightDelayAmps[32];
-    int rightDelayAmpsLength = 32;
+    ParameterControl leftDelayAmps[16];
+    int leftDelayAmpsLength = 16;
+    ParameterControl rightDelayAmps[16];
+    int rightDelayAmpsLength = 16;
     int numDelayAmps;
     float wetRatio;
     float autoFalloffRate;

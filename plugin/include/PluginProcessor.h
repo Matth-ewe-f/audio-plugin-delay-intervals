@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <melatonin_perfetto/melatonin_perfetto.h>
 #include "CircularBuffer.h"
@@ -82,10 +83,13 @@ private:
     float lastDryWet;
     float lastFalloff;
     bool lastLoop;
-    DelayAmp leftAmps[32];
-    DelayInterval leftDelays[32];
-    DelayAmp rightAmps[32];
-    DelayInterval rightDelays[32];
+    DelayAmp leftAmps[16];
+    CircularBuffer leftBuffer;
+    // DelayInterval leftDelays[16];
+    DelayAmp rightAmps[16];
+    CircularBuffer rightBuffer;
+    // DelayInterval rightDelays[16];
+    std::vector<float> tempBuffer; // for operating on signal in processBlock
 #if PERFETTO
     std::unique_ptr<perfetto::TracingSession> tracingSession;
 #endif

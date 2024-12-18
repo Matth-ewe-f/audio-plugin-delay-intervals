@@ -4,17 +4,18 @@
 struct DelayAmp : public juce::AudioProcessorValueTreeState::Listener
 {
 public:
-    juce::SmoothedValue<float> smoothAmplitude;
-
     ~DelayAmp() override;
 
     void listenTo(juce::AudioProcessorValueTreeState*, std::string);
     void parameterChanged(const juce::String&, float) override;
-    float getAmplitude();
 
-    void reset(int samplesPerBlock);
+    float getLastValue();
+    float getCurrentValue();
+    bool hasNewValue();
 
 private:
+    float lastValue;
+    float currentValue;
     juce::AudioProcessorValueTreeState* tree;
     std::string parameterId;
 };
