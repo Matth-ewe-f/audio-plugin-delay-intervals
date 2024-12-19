@@ -227,15 +227,16 @@ void PluginProcessor::processBlock
 				dryAmpStart = 0;
 			else if (!loop || fadeOut)
 				dryAmpEnd = 0;
-			float falloffScale = pow(curFalloff, (float) curIntervals);
-			dryAmpStart *= falloffScale;
-			dryAmpEnd *= falloffScale;
+			float falloffStart = pow(lastFalloff, (float) curIntervals);
+			float falloffEnd = pow(curFalloff, (float) curIntervals);
+			dryAmpStart *= falloffStart;
+			dryAmpEnd *= falloffEnd;
 			delayBuf->sumWithSamplesRamped(
 				loopDelay, channelData, numSamples, dryAmpStart, dryAmpEnd
 			);
 			float* tmp = tempBuffer.data();
-			float feedbackStart = lastLoop ? falloffScale : 0;
-			float feedbackEnd = loop ? falloffScale : 0;
+			float feedbackStart = lastLoop ? falloffStart : 0;
+			float feedbackEnd = loop ? falloffEnd : 0;
 			delayBuf->sumWithSamplesRamped(
 				loopDelay, tmp, numSamples, feedbackStart, feedbackEnd
 			);
@@ -266,8 +267,13 @@ void PluginProcessor::processBlock
 				float gain = amps[i].getCurrentValue();
 				delayBuf->sumWithSamples(d, data, numSamples, gain);
 			}
+			float falloffRamp = lastFalloff;
+			float falloffStep = (curFalloff - lastFalloff) / numSamples;
 			for (size_t j = 0;j < numSamples;j++)
-				data[j] *= curFalloff;
+			{
+				falloffRamp += falloffStep;
+				data[j] *= falloffRamp;
+			}
 		}
 		// scale wet signal by dry/wet, fade out if delay time has started
 		// changing on this block, and add to output signal
