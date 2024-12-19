@@ -13,7 +13,7 @@ CircularBuffer::CircularBuffer(size_t capacity)
         throw std::invalid_argument("Cannot have CircularBuffer of size 0");
 }
 
-// === Manipulate Samples =====================================================
+// === Add Samples ============================================================
 void CircularBuffer::addSample(const float sample)
 {
     leastRecentSample = (leastRecentSample + 1) % buffer.size();
@@ -51,6 +51,7 @@ void CircularBuffer::addSamplesRamped(const float* samples, size_t length)
         numSamples = buffer.size();
 }
 
+// === Get Samples ============================================================
 float CircularBuffer::getSample(size_t delay)
 {
     if (delay > buffer.size())
@@ -137,6 +138,46 @@ void CircularBuffer::sumWithSamplesRamped
             output[i] += s * gain;
         }
         gain += gainStep;
+    }
+}
+
+
+// === Manipulate Samples =====================================================
+void CircularBuffer::applyGainToSamples(size_t delay, size_t len, float gain)
+{
+    if (juce::approximatelyEqual(gain, 1.0f))
+        return;
+    size_t index = leastRecentSample - delay;
+    if (index > buffer.size())
+        index += buffer.size(); // if index underflowed, overflow it back
+    for (size_t i = 0;i < len;i++)
+    {
+        buffer[index] *= gain;
+        index = (index + 1) % buffer.size();
+    }
+}
+
+void CircularBuffer::applyGainToSamples
+(size_t delay, size_t len, float start, float end)
+{
+    bool startIsOne = juce::approximatelyEqual(start, 1.0f);
+    bool endIsOne = juce::approximatelyEqual(end, 1.0f);
+    if (startIsOne && endIsOne)
+        return;
+    if (juce::approximatelyEqual(start, end))
+    {
+        applyGainToSamples(delay, len, start);
+        return;
+    }
+    size_t index = leastRecentSample - delay;
+    if (index > buffer.size())
+        index += buffer.size(); // if index underflowed, overflow it back
+    float gainStep = (end - start) / len;
+    for (size_t i = 0;i < len;i++)
+    {
+        start += gainStep;
+        buffer[index] *= start;
+        index = (index + 1) % buffer.size();
     }
 }
 

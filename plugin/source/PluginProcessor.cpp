@@ -221,22 +221,19 @@ void PluginProcessor::processBlock
 		if (loop || lastLoop)
 		{
 			size_t loopDelay = delay * intervals - numSamples;
+			delayBuf->applyGainToSamples(loopDelay, numSamples, lastFalloff, curFalloff);
 			dryAmpStart *= lastDryWet;
 			dryAmpEnd *= curDryWet;
 			if (!lastLoop)
 				dryAmpStart = 0;
 			else if (!loop || fadeOut)
 				dryAmpEnd = 0;
-			float falloffStart = pow(lastFalloff, (float) curIntervals);
-			float falloffEnd = pow(curFalloff, (float) curIntervals);
-			dryAmpStart *= falloffStart;
-			dryAmpEnd *= falloffEnd;
 			delayBuf->sumWithSamplesRamped(
 				loopDelay, channelData, numSamples, dryAmpStart, dryAmpEnd
 			);
 			float* tmp = tempBuffer.data();
-			float feedbackStart = lastLoop ? falloffStart : 0;
-			float feedbackEnd = loop ? falloffEnd : 0;
+			float feedbackStart = lastLoop ? 1 : 0;
+			float feedbackEnd = loop ? 1 : 0;
 			delayBuf->sumWithSamplesRamped(
 				loopDelay, tmp, numSamples, feedbackStart, feedbackEnd
 			);
@@ -255,6 +252,7 @@ void PluginProcessor::processBlock
 		for (size_t i = intervals - 1;i > 0;i--)
 		{
 			size_t d = delay * i;
+			delayBuf->applyGainToSamples(d, numSamples, lastFalloff, curFalloff);
 			float* data = tempBuffer.data();
 			if (amps[i].hasNewValue())
 			{
@@ -266,13 +264,6 @@ void PluginProcessor::processBlock
 			{
 				float gain = amps[i].getCurrentValue();
 				delayBuf->sumWithSamples(d, data, numSamples, gain);
-			}
-			float falloffRamp = lastFalloff;
-			float falloffStep = (curFalloff - lastFalloff) / numSamples;
-			for (size_t j = 0;j < numSamples;j++)
-			{
-				falloffRamp += falloffStep;
-				data[j] *= falloffRamp;
 			}
 		}
 		// scale wet signal by dry/wet, fade out if delay time has started
