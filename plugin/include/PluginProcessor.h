@@ -79,10 +79,11 @@ public:
 private:
     double lastSampleRate;
     size_t lastDelay;
-    bool lastBlockDelayChanged;
+    size_t lastIntervals;
     float lastDryWet;
     float lastFalloff;
     bool lastLoop;
+    bool lastBlockFadeOut;
     DelayAmp leftAmps[16];
     CircularBuffer leftBuffer;
     // DelayInterval leftDelays[16];

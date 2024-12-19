@@ -30,17 +30,11 @@ PluginProcessor::PluginProcessor()
 		rightAmps[i].listenTo(&tree, getIdForRightIntervalAmp(i));
 	}
 	lastDelay = getDelaySamples();
-	lastBlockDelayChanged = false;
+	lastIntervals = getCurrentNumIntervals();
+	lastBlockFadeOut = false;
 	lastDryWet = *tree.getRawParameterValue("dry-wet") / 100;
 	lastFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
 	lastLoop = *tree.getRawParameterValue("loop") >= 1;
-	// for (size_t i = 0;i < maxIntervals;i++)
-	// {
-	// 	Filter* left = &leftDelays[i].filter;
-	// 	left->attachToParameters(&tree, "left-high-pass", "left-low-pass");
-	// 	Filter* right = &rightDelays[i].filter;
-	// 	right->attachToParameters(&tree, "right-high-pass", "right-low-pass");
-	// }
 }
 
 PluginProcessor::~PluginProcessor()
@@ -153,7 +147,8 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 	rightBuffer.resize(sampleRate, (maxDelayTime / 1000) * (maxIntervals + 1));
 	// prepare tracking of smoothed values
 	lastDelay = getDelaySamples();
-	lastBlockDelayChanged = false;
+	lastIntervals = getCurrentNumIntervals();
+	lastBlockFadeOut = false;
 	lastDryWet = *tree.getRawParameterValue("dry-wet") / 100;
 	lastFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
 	lastLoop = *tree.getRawParameterValue("loop") >= 1;
@@ -177,6 +172,10 @@ void PluginProcessor::processBlock
 	size_t curDelay = getDelaySamples();
 	bool delayChanged = curDelay != lastDelay && lastDelay != LONG_MAX;
 	size_t delay = delayChanged ? lastDelay : curDelay;
+	size_t curIntervals = getCurrentNumIntervals();
+	bool intervalsChanged = curIntervals != lastIntervals;
+	size_t intervals = intervalsChanged ? lastIntervals : curIntervals;
+	bool fadeOut = delayChanged || intervalsChanged;
 	float curDryWet = *tree.getRawParameterValue("dry-wet") / 100;
 	float curFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
 	bool loop = *tree.getRawParameterValue("loop") >= 1;
@@ -187,7 +186,6 @@ void PluginProcessor::processBlock
 		float* channelData = buffer.getWritePointer(channel);
 		CircularBuffer* delayBuf = channel == 0 ? &leftBuffer : &rightBuffer;
 		DelayAmp* amps = channel == 0 ? leftAmps : rightAmps;
-		size_t curIntervals = getCurrentNumIntervals();
 		float dryWet = lastDryWet;
 		float dryWetStep;
 		if (juce::approximatelyEqual(lastDryWet, curDryWet))
@@ -222,7 +220,7 @@ void PluginProcessor::processBlock
 		// adding back to the delay buffer
 		if (loop || lastLoop)
 		{
-			size_t loopDelay = delay * curIntervals - numSamples;
+			size_t loopDelay = delay * intervals - numSamples;
 			dryAmpStart *= lastDryWet;
 			dryAmpEnd *= curDryWet;
 			if (!lastLoop)
@@ -240,17 +238,17 @@ void PluginProcessor::processBlock
 			);
 		}
 		// add dry (and looped, if enabled) signal to the delay buffer
-		if (!lastBlockDelayChanged)
+		if (!lastBlockFadeOut)
 			delayBuf->addSamples(tempBuffer.data(), numSamples);
-		else if (!delayChanged)
+		else if (!fadeOut)
 			delayBuf->addSamplesRamped(tempBuffer.data(), numSamples);
 		// skip wet signal if delay is currently changing
-		if (delayChanged && lastBlockDelayChanged)
+		if (fadeOut && lastBlockFadeOut)
 			continue;
 		// get wet signal scaled by amplitude sliders
 		for (size_t i = 0;i < numSamples;i++)
 			tempBuffer[i] = 0;
-		for (size_t i = 1;i < curIntervals;i++)
+		for (size_t i = 1;i < intervals;i++)
 		{
 			size_t d = delay * i;
 			float* data = tempBuffer.data();
@@ -275,16 +273,17 @@ void PluginProcessor::processBlock
 		{
 			fade -= fadeStep;
 			dryWet += dryWetStep;
-			tempBuffer[i] *= dryWet * (delayChanged ? fade : 1);
+			tempBuffer[i] *= dryWet * (fadeOut ? fade : 1);
 			channelData[i] += tempBuffer[i];
 		}
 		// clear buffer if the delay time has changed
-		if (delayChanged)
+		if (fadeOut)
 			delayBuf->clear();
 	}
 	// save parameters to compare with next block
 	lastDelay = curDelay;
-	lastBlockDelayChanged = delayChanged;
+	lastIntervals = curIntervals;
+	lastBlockFadeOut = fadeOut;
 	lastDryWet = curDryWet;
 	lastFalloff = curFalloff;
 	lastLoop = loop;
