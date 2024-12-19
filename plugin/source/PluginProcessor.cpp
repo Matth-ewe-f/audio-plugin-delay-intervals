@@ -225,7 +225,7 @@ void PluginProcessor::processBlock
 			dryAmpEnd *= curDryWet;
 			if (!lastLoop)
 				dryAmpStart = 0;
-			else if (!loop)
+			else if (!loop || fadeOut)
 				dryAmpEnd = 0;
 			delayBuf->sumWithSamplesRamped(
 				loopDelay, channelData, numSamples, dryAmpStart, dryAmpEnd
