@@ -8,7 +8,7 @@
 CircularBuffer::CircularBuffer() : CircularBuffer(44100) { }
 
 CircularBuffer::CircularBuffer(size_t capacity)
-    : buffer(capacity), leastRecentSample(0), numSamples(0)
+    : buffer(capacity), mostRecentSample(0), numSamples(0)
 { 
     if (capacity == 0)
         throw std::invalid_argument("Cannot have CircularBuffer of size 0");
@@ -17,8 +17,8 @@ CircularBuffer::CircularBuffer(size_t capacity)
 // === Add Samples ============================================================
 void CircularBuffer::addSample(const float sample)
 {
-    leastRecentSample = (leastRecentSample + 1) % buffer.size();
-    buffer[leastRecentSample] = sample;
+    mostRecentSample = (mostRecentSample + 1) % buffer.size();
+    buffer[mostRecentSample] = sample;
     if (numSamples < buffer.size())
         numSamples++;
 }
@@ -29,8 +29,8 @@ void CircularBuffer::addSamples(const float* samples, size_t length)
         throw std::invalid_argument("Too many samples");
     for (size_t i = 0;i < length;i++)
     {
-        leastRecentSample = (leastRecentSample + 1) % buffer.size();
-        buffer[leastRecentSample] = samples[i];
+        mostRecentSample = (mostRecentSample + 1) % buffer.size();
+        buffer[mostRecentSample] = samples[i];
     }
     numSamples += length;
     if (numSamples > buffer.size())
@@ -44,8 +44,8 @@ void CircularBuffer::addSamplesRamped(const float* samples, size_t length)
     for (size_t i = 0;i < length;i++)
     {
         float gain = (i + 1) / (float) length;
-        leastRecentSample = (leastRecentSample + 1) % buffer.size();
-        buffer[leastRecentSample] = samples[i] * gain;
+        mostRecentSample = (mostRecentSample + 1) % buffer.size();
+        buffer[mostRecentSample] = samples[i] * gain;
     }
     numSamples += length;
     if (numSamples > buffer.size())
@@ -59,10 +59,10 @@ float CircularBuffer::getSample(size_t delay)
         throw std::invalid_argument("Delay value too long");
     if (delay >= numSamples)
         return 0;
-    if (leastRecentSample >= delay)
-        return buffer[leastRecentSample - delay];
+    if (mostRecentSample >= delay)
+        return buffer[mostRecentSample - delay];
     else
-        return buffer[buffer.size() + leastRecentSample - delay];
+        return buffer[buffer.size() + mostRecentSample - delay];
 }
 
 void CircularBuffer::getSamples
@@ -77,10 +77,10 @@ void CircularBuffer::getSamples
         size_t curDelay = delay + len - 1 - i;
         if (curDelay >= numSamples)
             output[i] = 0;
-        if (leastRecentSample >= curDelay)
-            output[i] = buffer[leastRecentSample - curDelay];
+        if (mostRecentSample >= curDelay)
+            output[i] = buffer[mostRecentSample - curDelay];
         else
-            output[i] = buffer[buffer.size() + leastRecentSample - curDelay];
+            output[i] = buffer[buffer.size() + mostRecentSample - curDelay];
     }
 }
 
@@ -98,13 +98,13 @@ void CircularBuffer::sumWithSamples
         size_t curDelay = delay + len - 1 - i;
         if (curDelay >= numSamples)
             continue;
-        if (leastRecentSample >= curDelay)
+        if (mostRecentSample >= curDelay)
         {
-            output[i] += buffer[leastRecentSample - curDelay] * gain;
+            output[i] += buffer[mostRecentSample - curDelay] * gain;
         }
         else
         {
-            float s = buffer[buffer.size() + leastRecentSample - curDelay];
+            float s = buffer[buffer.size() + mostRecentSample - curDelay];
             output[i] += s * gain;
         }
     }
@@ -129,13 +129,13 @@ void CircularBuffer::sumWithSamplesRamped
         size_t curDelay = delay + len - 1 - i;
         if (curDelay >= numSamples)
             continue;
-        if (leastRecentSample >= curDelay)
+        if (mostRecentSample >= curDelay)
         {
-            output[i] += buffer[leastRecentSample - curDelay] * gain;
+            output[i] += buffer[mostRecentSample - curDelay] * gain;
         }
         else
         {
-            float s = buffer[buffer.size() + leastRecentSample - curDelay];
+            float s = buffer[buffer.size() + mostRecentSample - curDelay];
             output[i] += s * gain;
         }
         gain += gainStep;
@@ -152,7 +152,7 @@ void CircularBuffer::applyGainToSamples(size_t delay, size_t len, float gain)
         throw std::invalid_argument("Delay value too long");
     if (juce::approximatelyEqual(gain, 1.0f))
         return;
-    size_t index = leastRecentSample - delay;
+    size_t index = mostRecentSample - delay;
     if (index > buffer.size())
         index += buffer.size(); // if index underflowed, overflow it back
     for (size_t i = 0;i < len;i++)
@@ -178,7 +178,7 @@ void CircularBuffer::applyGainToSamples
         applyGainToSamples(delay, len, start);
         return;
     }
-    size_t index = leastRecentSample - delay;
+    size_t index = mostRecentSample - delay;
     if (index > buffer.size())
         index += buffer.size(); // if index underflowed, overflow it back
     float gainStep = (end - start) / len;
@@ -197,7 +197,7 @@ void CircularBuffer::applyFilterToSamples
         throw std::invalid_argument("Too many delayed samples requested");
     if (delay + len > buffer.size())
         throw std::invalid_argument("Delay value too long");
-    size_t index = leastRecentSample - delay;
+    size_t index = mostRecentSample - delay;
     if (index > buffer.size())
         index += buffer.size(); // if index underflowed, overflow it back
     for (size_t i = 0;i < len;i++)
@@ -210,7 +210,7 @@ void CircularBuffer::applyFilterToSamples
 // === Other Operations =======================================================
 void CircularBuffer::clear()
 {
-    leastRecentSample = 0;
+    mostRecentSample = 0;
     numSamples = 0;
 }
 
