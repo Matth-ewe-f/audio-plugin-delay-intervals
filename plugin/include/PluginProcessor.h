@@ -86,10 +86,10 @@ private:
     bool lastBlockFadeOut;
     DelayAmp leftAmps[16];
     CircularBuffer leftBuffer;
-    // DelayInterval leftDelays[16];
+    Filter leftFilters[16];
     DelayAmp rightAmps[16];
     CircularBuffer rightBuffer;
-    // DelayInterval rightDelays[16];
+    Filter rightFilters[16];
     std::vector<float> tempBuffer; // for operating on signal in processBlock
 #if PERFETTO
     std::unique_ptr<perfetto::TracingSession> tracingSession;

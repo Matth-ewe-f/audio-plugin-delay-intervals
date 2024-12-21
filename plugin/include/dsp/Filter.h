@@ -19,6 +19,7 @@ public:
     void parameterChanged(const juce::String&, float);
 
     // === Process Audio ======================================================
+    void reset();
     void prepare(const dsp::ProcessSpec&);
     float processSample(float);
 

@@ -42,6 +42,12 @@ void Filter::parameterChanged(const juce::String& param, float value)
 }
 
 // === Process Audio ==========================================================
+void Filter::reset()
+{
+    highPass.reset();
+    lowPass.reset();
+}
+
 void Filter::prepare(const dsp::ProcessSpec& spec)
 {
     highPass.prepare(spec);

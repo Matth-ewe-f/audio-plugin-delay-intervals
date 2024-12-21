@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <juce_audio_basics/juce_audio_basics.h>
+#include "Filter.h"
 
 // === Lifecycle ==============================================================
 CircularBuffer::CircularBuffer() : CircularBuffer(44100) { }
@@ -145,6 +146,10 @@ void CircularBuffer::sumWithSamplesRamped
 // === Manipulate Samples =====================================================
 void CircularBuffer::applyGainToSamples(size_t delay, size_t len, float gain)
 {
+    if (len > buffer.size())
+        throw std::invalid_argument("Too many delayed samples requested");
+    if (delay + len > buffer.size())
+        throw std::invalid_argument("Delay value too long");
     if (juce::approximatelyEqual(gain, 1.0f))
         return;
     size_t index = leastRecentSample - delay;
@@ -160,6 +165,10 @@ void CircularBuffer::applyGainToSamples(size_t delay, size_t len, float gain)
 void CircularBuffer::applyGainToSamples
 (size_t delay, size_t len, float start, float end)
 {
+    if (len > buffer.size())
+        throw std::invalid_argument("Too many delayed samples requested");
+    if (delay + len > buffer.size())
+        throw std::invalid_argument("Delay value too long");
     bool startIsOne = juce::approximatelyEqual(start, 1.0f);
     bool endIsOne = juce::approximatelyEqual(end, 1.0f);
     if (startIsOne && endIsOne)
@@ -177,6 +186,23 @@ void CircularBuffer::applyGainToSamples
     {
         start += gainStep;
         buffer[index] *= start;
+        index = (index + 1) % buffer.size();
+    }
+}
+
+void CircularBuffer::applyFilterToSamples
+(size_t delay, size_t len, Filter* filter)
+{
+    if (len > buffer.size())
+        throw std::invalid_argument("Too many delayed samples requested");
+    if (delay + len > buffer.size())
+        throw std::invalid_argument("Delay value too long");
+    size_t index = leastRecentSample - delay;
+    if (index > buffer.size())
+        index += buffer.size(); // if index underflowed, overflow it back
+    for (size_t i = 0;i < len;i++)
+    {
+        buffer[index] = filter->processSample(buffer[index]);
         index = (index + 1) % buffer.size();
     }
 }

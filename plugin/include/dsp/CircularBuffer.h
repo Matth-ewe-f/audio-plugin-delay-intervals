@@ -1,6 +1,9 @@
 #pragma once
 #include <vector>
 
+// forward declarations
+class Filter;
+
 class CircularBuffer
 {
 public:
@@ -24,6 +27,7 @@ public:
     // === Manipulate Samples =================================================
     void applyGainToSamples(size_t delay, size_t len, float gain);
     void applyGainToSamples(size_t delay, size_t len, float start, float end);
+    void applyFilterToSamples(size_t delay, size_t len, Filter* filter);
 
     // === Other Operations ===================================================
     void clear();

@@ -24,10 +24,16 @@ PluginProcessor::PluginProcessor()
 #if PERFETTO
     MelatoninPerfetto::get().beginSession();
 #endif
+	std::string leftHigh = "left-high-pass";
+	std::string leftLow = "left-low-pass";
+	std::string rightHigh = "right-high-pass";
+	std::string rightLow = "right-low-pass";
 	for (int i = 0;i < maxIntervals;i++)
 	{
 		leftAmps[i].listenTo(&tree, getIdForLeftIntervalAmp(i));
 		rightAmps[i].listenTo(&tree, getIdForRightIntervalAmp(i));
+		leftFilters[i].attachToParameters(&tree, leftHigh, leftLow);
+		rightFilters[i].attachToParameters(&tree, rightHigh, rightLow);
 	}
 	lastDelay = getDelaySamples();
 	lastIntervals = getCurrentNumIntervals();
@@ -137,11 +143,16 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
 	lastSampleRate = sampleRate;
-	// spec for filters
-	// juce::dsp::ProcessSpec spec;
-	// spec.sampleRate = sampleRate;
-	// spec.maximumBlockSize = (unsigned) samplesPerBlock;
-	// spec.numChannels = (unsigned) getTotalNumOutputChannels();
+	// prepare the filters
+	juce::dsp::ProcessSpec spec;
+	spec.sampleRate = sampleRate;
+	spec.maximumBlockSize = (unsigned) samplesPerBlock;
+	spec.numChannels = (unsigned) getTotalNumOutputChannels();
+	for (int i = 0;i < maxIntervals;i++)
+	{
+		leftFilters[i].prepare(spec);
+		rightFilters[i].prepare(spec);
+	}
 	// prepare the delay buffers
 	leftBuffer.resize(sampleRate, (maxDelayTime / 1000) * (maxIntervals + 1));
 	rightBuffer.resize(sampleRate, (maxDelayTime / 1000) * (maxIntervals + 1));
@@ -186,6 +197,7 @@ void PluginProcessor::processBlock
 		float* channelData = buffer.getWritePointer(channel);
 		CircularBuffer* delayBuf = channel == 0 ? &leftBuffer : &rightBuffer;
 		DelayAmp* amps = channel == 0 ? leftAmps : rightAmps;
+		Filter* filters = channel == 0 ? leftFilters : rightFilters;
 		float dryWet = lastDryWet;
 		float dryWetStep;
 		if (juce::approximatelyEqual(lastDryWet, curDryWet))
@@ -221,7 +233,10 @@ void PluginProcessor::processBlock
 		if (loop || lastLoop)
 		{
 			size_t loopDelay = delay * intervals - numSamples;
-			delayBuf->applyGainToSamples(loopDelay, numSamples, lastFalloff, curFalloff);
+			delayBuf->applyGainToSamples(
+				loopDelay, numSamples, lastFalloff, curFalloff
+			);
+			delayBuf->applyFilterToSamples(loopDelay, numSamples, &filters[0]);
 			dryAmpStart *= lastDryWet;
 			dryAmpEnd *= curDryWet;
 			if (!lastLoop)
@@ -252,7 +267,10 @@ void PluginProcessor::processBlock
 		for (size_t i = intervals - 1;i > 0;i--)
 		{
 			size_t d = delay * i;
-			delayBuf->applyGainToSamples(d, numSamples, lastFalloff, curFalloff);
+			delayBuf->applyGainToSamples(
+				d, numSamples, lastFalloff, curFalloff
+			);
+			delayBuf->applyFilterToSamples(d, numSamples, &filters[i]);
 			float* data = tempBuffer.data();
 			if (amps[i].hasNewValue())
 			{
