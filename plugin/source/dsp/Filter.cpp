@@ -73,3 +73,11 @@ float Filter::processSample(float sample)
     }
     return lowPass.processSample(highPass.processSample(sample));
 }
+
+void Filter::processSamples(float* samples, size_t length)
+{
+    juce::dsp::AudioBlock<float> block(&samples, 1, length);
+    juce::dsp::ProcessContextReplacing<float> context(block);
+    lowPass.process(context);
+    highPass.process(context);
+}

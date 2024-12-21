@@ -22,6 +22,7 @@ public:
     void reset();
     void prepare(const dsp::ProcessSpec&);
     float processSample(float);
+    void processSamples(float*, size_t);
 
 private:
     dsp::IIR::Filter<float> highPass;

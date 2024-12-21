@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <melatonin_perfetto/melatonin_perfetto.h>
 #include "Filter.h"
 
 // === Lifecycle ==============================================================
@@ -193,18 +194,29 @@ void CircularBuffer::applyGainToSamples
 void CircularBuffer::applyFilterToSamples
 (size_t delay, size_t len, Filter* filter)
 {
+    TRACE_EVENT_BEGIN("dsp", "filter");
     if (len > buffer.size())
         throw std::invalid_argument("Too many delayed samples requested");
     if (delay + len > buffer.size())
         throw std::invalid_argument("Delay value too long");
-    size_t index = mostRecentSample - delay;
-    if (index > buffer.size())
-        index += buffer.size(); // if index underflowed, overflow it back
-    for (size_t i = 0;i < len;i++)
+    // get bounds of area to process
+    size_t start = mostRecentSample - delay;
+    size_t end = start + len;
+    // handle underflow in bounds
+    if (start > buffer.size())
+        start += buffer.size();
+    if (end > buffer.size())
+        end += buffer.size();
+    if (start > end)
     {
-        buffer[index] = filter->processSample(buffer[index]);
-        index = (index + 1) % buffer.size();
+        filter->processSamples(buffer.data() + start, buffer.size() - start);
+        filter->processSamples(buffer.data(), end);
     }
+    else
+    {
+        filter->processSamples(buffer.data() + start, len);
+    }
+    TRACE_EVENT_END("dsp");
 }
 
 // === Other Operations =======================================================
