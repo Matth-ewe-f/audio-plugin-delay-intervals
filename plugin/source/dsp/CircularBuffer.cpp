@@ -191,6 +191,7 @@ void CircularBuffer::applyGainToSamples
     }
 }
 
+// func is a little less elegant that others but it's more efficient this way
 void CircularBuffer::applyFilterToSamples
 (size_t delay, size_t len, Filter* filter)
 {
@@ -207,7 +208,7 @@ void CircularBuffer::applyFilterToSamples
         start += buffer.size();
     if (end > buffer.size())
         end += buffer.size();
-    if (start > end)
+    if (start > end && end != 0)
     {
         filter->processSamples(buffer.data() + start, buffer.size() - start);
         filter->processSamples(buffer.data(), end);
