@@ -33,14 +33,12 @@ private:
     ParameterControl numIntervals;
     ParameterToggle loopButton;
     // === Channel Controls ===================================================
-    ParameterControl leftFilterFirstLow;
-    ParameterControl leftFilterFirstHigh;
-    ParameterControl leftFilterSecondLow;
-    ParameterControl leftFilterSecondHigh;
-    ParameterControl rightFilterFirstLow;
-    ParameterControl rightFilterFirstHigh;
-    ParameterControl rightFilterSecondLow;
-    ParameterControl rightFilterSecondHigh;
+    ParameterControl leftFilterLow;
+    ParameterControl leftFilterHigh;
+    ParameterControl leftFilterMix;
+    ParameterControl rightFilterLow;
+    ParameterControl rightFilterHigh;
+    ParameterControl rightFilterMix;
     ParameterControl leftDelayAmps[16];
     int leftDelayAmpsLength = 16;
     ParameterControl rightDelayAmps[16];
@@ -67,6 +65,7 @@ private:
     static const int delayAmpsMarginY;
     static const int filterKnobW;
     static const int filterKnobH;
+    static const int filterMixMargin;
     static const int col3Width;
     static const int col3KnobW;
     static const int col3KnobH;

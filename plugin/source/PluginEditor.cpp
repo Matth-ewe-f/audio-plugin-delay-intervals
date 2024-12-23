@@ -16,6 +16,7 @@ const int PluginEditor::delayAmpsMarginX = 14;
 const int PluginEditor::delayAmpsMarginY = 12;
 const int PluginEditor::filterKnobW = 58;
 const int PluginEditor::filterKnobH = 68;
+const int PluginEditor::filterMixMargin = 20;
 const int PluginEditor::col3Width = 112;
 const int PluginEditor::col3KnobW = 72;
 const int PluginEditor::col3KnobH = 80;
@@ -77,38 +78,30 @@ void PluginEditor::setupChannels()
     float f = *tree->getRawParameterValue("falloff");
     autoFalloffRate = 1 - (f / 100);
     // setup filter controls
-    leftFilterFirstLow.setTitleText("Low");
-    leftFilterFirstLow.label.setPostfix(" Hz");
-    leftFilterFirstLow.setTightText();
-    addParameterControl(&leftFilterFirstLow);
-    leftFilterFirstHigh.setTitleText("High");
-    leftFilterFirstHigh.label.setPostfix(" Hz");
-    leftFilterFirstHigh.setTightText();
-    addParameterControl(&leftFilterFirstHigh);
-    leftFilterSecondLow.setTitleText("Low");
-    leftFilterSecondLow.attachToParameter(tree, "left-high-pass");
-    leftFilterSecondLow.setTightText();
-    addParameterControl(&leftFilterSecondLow);
-    leftFilterSecondHigh.setTitleText("High");
-    leftFilterSecondHigh.attachToParameter(tree, "left-low-pass");
-    leftFilterSecondHigh.setTightText();
-    addParameterControl(&leftFilterSecondHigh);
-    rightFilterFirstLow.setTitleText("Low");
-    rightFilterFirstLow.label.setPostfix(" Hz");
-    rightFilterFirstLow.setTightText();
-    addParameterControl(&rightFilterFirstLow);
-    rightFilterFirstHigh.setTitleText("High");
-    rightFilterFirstHigh.label.setPostfix(" Hz");
-    rightFilterFirstHigh.setTightText();
-    addParameterControl(&rightFilterFirstHigh);
-    rightFilterSecondLow.setTitleText("Low");
-    rightFilterSecondLow.attachToParameter(tree, "right-high-pass");
-    rightFilterSecondLow.setTightText();
-    addParameterControl(&rightFilterSecondLow);
-    rightFilterSecondHigh.setTitleText("High");
-    rightFilterSecondHigh.attachToParameter(tree, "right-low-pass");
-    rightFilterSecondHigh.setTightText();
-    addParameterControl(&rightFilterSecondHigh);
+    leftFilterLow.setTitleText("Low");
+    leftFilterLow.setTightText();
+    leftFilterLow.attachToParameter(&processorRef.tree, "left-high-pass");
+    addParameterControl(&leftFilterLow);
+    leftFilterHigh.setTitleText("High");
+    leftFilterHigh.setTightText();
+    leftFilterHigh.attachToParameter(&processorRef.tree, "left-low-pass");
+    addParameterControl(&leftFilterHigh);
+    leftFilterMix.setTitleText("Mix");
+    leftFilterMix.setTightText();
+    leftFilterMix.attachToParameter(&processorRef.tree, "left-filter-mix");
+    addParameterControl(&leftFilterMix);
+    rightFilterLow.setTitleText("Low");
+    rightFilterLow.setTightText();
+    rightFilterLow.attachToParameter(&processorRef.tree, "right-high-pass");
+    addParameterControl(&rightFilterLow);
+    rightFilterHigh.setTitleText("High");
+    rightFilterHigh.setTightText();
+    rightFilterHigh.attachToParameter(&processorRef.tree, "right-low-pass");
+    addParameterControl(&rightFilterHigh);
+    rightFilterMix.setTitleText("Mix");
+    rightFilterMix.setTightText();
+    rightFilterMix.attachToParameter(&processorRef.tree, "right-filter-mix");
+    addParameterControl(&rightFilterMix);
     // setup delay amplitude sliders
     for (int i = 0;i < leftDelayAmpsLength;i++)
     {
@@ -218,25 +211,22 @@ void PluginEditor::layoutLeftSideGlobals()
 void PluginEditor::layoutChannelFilters()
 {
     // calculate dimensions and shared positions
-    int filterW = filterKnobW * 2;
-    int filterAreaW = (col2Width - (2 * col2Margin));
     int xStart = col1Width + col2Margin;
-    int x1 = xStart + (filterAreaW - 2 * filterW) / 3;
+    int filterAreaW = (col2Width - (2 * col2Margin));
+    int filterW = filterKnobW * 3 + filterMixMargin;
+    int x1 = xStart + (filterAreaW - filterW) / 2;
     int y1 = (((getHeight() / 2) - delayAmpsAreaHeight) - filterKnobH) / 2 + 9;
     int y2 = (getHeight() / 2) + delayAmpsAreaHeight;
     y2 = y2 + 9 + (getHeight() - y2 - filterKnobH) / 2;
     // lay out filters
-    leftFilterFirstLow.setBounds(x1, y1, filterKnobW, filterKnobH);
-    rightFilterFirstLow.setBounds(x1, y2, filterKnobW, filterKnobH);
+    leftFilterLow.setBounds(x1, y1, filterKnobW, filterKnobH);
+    rightFilterLow.setBounds(x1, y2, filterKnobW, filterKnobH);
     int x2 = x1 + filterKnobW;
-    leftFilterFirstHigh.setBounds(x2, y1, filterKnobW, filterKnobH);
-    rightFilterFirstHigh.setBounds(x2, y2, filterKnobW, filterKnobH);
-    int x3 = xStart + 2 * ((filterAreaW - 2 * filterW) / 3) + filterW;
-    leftFilterSecondLow.setBounds(x3, y1, filterKnobW, filterKnobH);
-    rightFilterSecondLow.setBounds(x3, y2, filterKnobW, filterKnobH);
-    int x4 = x3 + filterKnobW;
-    leftFilterSecondHigh.setBounds(x4, y1, filterKnobW, filterKnobH);
-    rightFilterSecondHigh.setBounds(x4, y2, filterKnobW, filterKnobH);
+    leftFilterHigh.setBounds(x2, y1, filterKnobW, filterKnobH);
+    rightFilterHigh.setBounds(x2, y2, filterKnobW, filterKnobH);
+    int x3 = x2 + filterKnobW + filterMixMargin;
+    leftFilterMix.setBounds(x3, y1, filterKnobW, filterKnobH);
+    rightFilterMix.setBounds(x3, y2, filterKnobW, filterKnobH);
 }
 
 void PluginEditor::layoutDelayAmps()
@@ -346,29 +336,23 @@ void PluginEditor::drawChannels(juce::Graphics& g)
     setRadialGradient(g, trans, x + w - r, y + r, black, r, r - s);
     g.fillPath(corners);
     // draw backgrounds for filters
-    int filterW = filterKnobW * 2;
-    int filterAreaW = (col2Width - (2 * col2Margin));
     int xStart = col1Width + col2Margin;
-    int x1 = xStart + (filterAreaW - 2 * filterW) / 3;
+    int filterAreaW = (col2Width - (2 * col2Margin));
+    int fw = filterKnobW * 3 + filterMixMargin;
+    int x1 = xStart + (filterAreaW - fw) / 2;
     int y1 = (((getHeight() / 2) - delayAmpsAreaHeight) - filterKnobH) / 2 - 9;
-    int x2 = xStart + 2 * ((filterAreaW - 2 * filterW) / 3) + filterW;
     int y2 = (getHeight() / 2) + delayAmpsAreaHeight;
-    y2 = y2 + (getHeight() - y2 - filterKnobH) / 2 - 9;
-    int fw = filterKnobW * 2;
+    y2 = y2 - 9 + (getHeight() - y2 - filterKnobH) / 2;
     int fh = filterKnobH + 18;
     g.setColour(findColour(CtmColourIds::darkBgColourId));
     g.fillRoundedRectangle(x1 - 6, y1 - 6, fw + 12, fh + 12, 12);
-    g.fillRoundedRectangle(x2 - 6, y1 - 6, fw + 12, fh + 12, 12);
     g.fillRoundedRectangle(x1 - 6, y2 - 6, fw + 12, fh + 12, 12);
-    g.fillRoundedRectangle(x2 - 6, y2 - 6, fw + 12, fh + 12, 12);
     // draw filter text
     g.setColour(juce::Colours::white);
     g.setFont(14);
     auto centered = juce::Justification::centred;
-    g.drawText("First Repeat Filter", x1 - 6, y1, fw + 12, 14, centered);
-    g.drawText("Subsequent Filter", x2 - 6, y1, fw + 12, 14, centered);
-    g.drawText("First Repeat Filter", x1 - 6, y2, fw + 12, 14, centered);
-    g.drawText("Subsequent Filter", x2 - 6, y2, fw + 12, 14, centered);
+    g.drawText("Delay Filter", x1 - 6, y1, fw + 12, 14, centered);
+    g.drawText("Delay Filter", x1 - 6, y2, fw + 12, 14, centered);
 }
 
 void PluginEditor::drawChannelLabels(juce::Graphics& g)

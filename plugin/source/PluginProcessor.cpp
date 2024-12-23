@@ -75,11 +75,17 @@ PluginProcessor::createParameters()
 	parameters.add(ParameterFactory::createFreqParameter(
 		"left-low-pass", "Filter Left High", 20000
 	));
+	parameters.add(ParameterFactory::createPercentageParameter(
+		"left-filter-mix", "Filter Left Mix", 100
+	));
 	parameters.add(ParameterFactory::createFreqParameter(
 		"right-high-pass", "Filter Right Low", 20
 	));
 	parameters.add(ParameterFactory::createFreqParameter(
 		"right-low-pass", "Filter Right High", 20000
+	));
+	parameters.add(ParameterFactory::createPercentageParameter(
+		"right-filter-mix", "Filter Right Mix", 100
 	));
 	// delay amplitudes
 	for (int i = 0;i < maxIntervals;i++)
