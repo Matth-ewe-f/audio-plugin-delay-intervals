@@ -45,6 +45,8 @@ PluginEditor::PluginEditor (PluginProcessor &p)
 PluginEditor::~PluginEditor()
 {
     processorRef.tree.removeParameterListener("num-intervals", this);
+    processorRef.tree.removeParameterListener("dry-wet", this);
+    processorRef.tree.removeParameterListener("falloff", this);
     setLookAndFeel(nullptr);
 }
 
