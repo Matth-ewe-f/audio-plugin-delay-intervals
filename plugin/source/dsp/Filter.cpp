@@ -76,6 +76,22 @@ float Filter::processSample(float sample)
 
 void Filter::processSamples(float* samples, size_t length)
 {
+    if (highPassFreq.isSmoothing())
+    {
+        float target = highPassFreq.getTargetValue();
+        highPass.coefficients = Coefficients::makeFirstOrderHighPass(
+            lastSampleRate, target
+        );
+        highPassFreq.setCurrentAndTargetValue(target);
+    }
+    if (lowPassFreq.isSmoothing())
+    {
+        float target = lowPassFreq.getTargetValue();
+        lowPass.coefficients = Coefficients::makeFirstOrderLowPass(
+            lastSampleRate, target
+        );
+        lowPassFreq.setCurrentAndTargetValue(target);
+    }
     juce::dsp::AudioBlock<float> block(&samples, 1, length);
     juce::dsp::ProcessContextReplacing<float> context(block);
     lowPass.process(context);
