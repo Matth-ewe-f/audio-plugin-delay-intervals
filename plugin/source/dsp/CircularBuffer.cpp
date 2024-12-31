@@ -1,87 +1,92 @@
 #include "CircularBuffer.h"
-#include <algorithm>
-#include <stdexcept>
 #include <juce_audio_basics/juce_audio_basics.h>
-#include <melatonin_perfetto/melatonin_perfetto.h>
 #include "Filter.h"
 
 // === Lifecycle ==============================================================
 CircularBuffer::CircularBuffer() : CircularBuffer(44100) { }
 
 CircularBuffer::CircularBuffer(size_t capacity)
-    : buffer(capacity), mostRecentSample(0), numSamples(0)
-{ 
-    if (capacity == 0)
-        throw std::invalid_argument("Cannot have CircularBuffer of size 0");
-}
+    : buffer(juce::jmax(capacity, 16UL)), leastRecentSample(0), numSamples(0)
+{ }
 
 // === Add Samples ============================================================
 void CircularBuffer::addSample(const float sample)
 {
-    mostRecentSample = (mostRecentSample + 1) % buffer.size();
-    buffer[mostRecentSample] = sample;
+    buffer[leastRecentSample] = sample;
+    leastRecentSample++;
+    if (leastRecentSample == buffer.size())
+        leastRecentSample = 0;
     if (numSamples < buffer.size())
         numSamples++;
 }
 
 void CircularBuffer::addSamples(const float* samples, size_t length)
 {
-    if (length > buffer.size())
-        throw std::invalid_argument("Too many samples");
-    for (size_t i = 0;i < length;i++)
-    {
-        mostRecentSample = (mostRecentSample + 1) % buffer.size();
-        buffer[mostRecentSample] = samples[i];
-    }
-    numSamples += length;
-    if (numSamples > buffer.size())
-        numSamples = buffer.size();
+    length = juce::jmin(length, buffer.size());
+    size_t limit = juce::jmin(leastRecentSample + length, buffer.size());
+    size_t srcIndex = 0;
+    for (size_t i = leastRecentSample;i < limit;i++)
+        buffer[i] = samples[srcIndex++];
+    // wrap around to the beginning of the buffer if necessary
+    for (size_t i = 0;srcIndex < length;i++)
+        buffer[i] = samples[srcIndex++];
+    numSamples = juce::jmin(numSamples + length, buffer.size());
+    leastRecentSample = (leastRecentSample + length) % buffer.size();
 }
 
 void CircularBuffer::addSamplesRamped(const float* samples, size_t length)
 {
-    if (length > buffer.size())
-        throw std::invalid_argument("Too many samples");
-    for (size_t i = 0;i < length;i++)
+    length = juce::jmin(length, buffer.size());
+    size_t limit = juce::jmin(leastRecentSample + length, buffer.size());
+    size_t srcIndex = 0;
+    float gain = 0;
+    float gainStep = 1.0f / length;
+    for (size_t i = leastRecentSample;i < limit;i++)
     {
-        float gain = (i + 1) / (float) length;
-        mostRecentSample = (mostRecentSample + 1) % buffer.size();
-        buffer[mostRecentSample] = samples[i] * gain;
+        gain += gainStep;
+        buffer[i] = samples[srcIndex++] * gain;
     }
-    numSamples += length;
-    if (numSamples > buffer.size())
-        numSamples = buffer.size();
+    // wrap around to the beginning of the buffer if necessary
+    for (size_t i = 0;srcIndex < length;i++)
+    {
+        gain += gainStep;
+        buffer[i] = samples[srcIndex++] * gain;
+    }
+    numSamples = juce::jmin(numSamples + length, buffer.size());
+    leastRecentSample = (leastRecentSample + length) % buffer.size();
 }
 
 // === Get Samples ============================================================
 float CircularBuffer::getSample(size_t delay)
 {
-    if (delay > buffer.size())
-        throw std::invalid_argument("Delay value too long");
     if (delay >= numSamples)
         return 0;
-    if (mostRecentSample >= delay)
-        return buffer[mostRecentSample - delay];
-    else
-        return buffer[buffer.size() + mostRecentSample - delay];
+    size_t index = leastRecentSample - 1 - delay;
+    if (index > buffer.size())
+        index += buffer.size(); // correct underflow
+    return buffer[index];
 }
 
 void CircularBuffer::getSamples
 (size_t delay, float* output, size_t len)
 {
-    if (len > buffer.size())
-        throw std::invalid_argument("Too many delayed samples requested");
-    if (delay + len > buffer.size())
-        throw std::invalid_argument("Delay value too long");
-    for (size_t i = 0;i < len;i++)
+    // setup counters and boundaries
+    size_t i = leastRecentSample - delay - len;
+    if (i > buffer.size())
+        i += buffer.size(); // correct underflow
+    size_t limit = juce::jmin(i + len, buffer.size());
+    size_t destIndex = 0;
+    // loop through the samples
+    for (;i < limit;i++)
     {
-        size_t curDelay = delay + len - 1 - i;
-        if (curDelay >= numSamples)
-            output[i] = 0;
-        if (mostRecentSample >= curDelay)
-            output[i] = buffer[mostRecentSample - curDelay];
-        else
-            output[i] = buffer[buffer.size() + mostRecentSample - curDelay];
+        float s = delay + len - destIndex <= numSamples ? buffer[i] : 0;
+        output[destIndex++] = s;
+    }
+    // wrap around to the beginning of the buffer if necessary
+    for (i = 0;destIndex < len;i++)
+    {
+        float s = delay + len - destIndex <= numSamples ? buffer[i] : 0;
+        output[destIndex++] = s;
     }
 }
 
@@ -90,24 +95,23 @@ void CircularBuffer::sumWithSamples
 {
     if (juce::approximatelyEqual(gain, 0.0f))
         return;
-    if (len > buffer.size())
-        throw std::invalid_argument("Too many delayed samples requested");
-    if (delay + len > buffer.size())
-        throw std::invalid_argument("Delay value too long");
-    for (size_t i = 0;i < len;i++)
+    // setup counters and boundaries
+    size_t i = leastRecentSample - delay - len;
+    if (i > buffer.size())
+        i += buffer.size(); // correct underflow
+    size_t limit = juce::jmin(i + len, buffer.size());
+    size_t destIndex = 0;
+    // loop through the samples
+    for (;i < limit;i++)
     {
-        size_t curDelay = delay + len - 1 - i;
-        if (curDelay >= numSamples)
-            continue;
-        if (mostRecentSample >= curDelay)
-        {
-            output[i] += buffer[mostRecentSample - curDelay] * gain;
-        }
-        else
-        {
-            float s = buffer[buffer.size() + mostRecentSample - curDelay];
-            output[i] += s * gain;
-        }
+        float s = delay + len - destIndex <= numSamples ? buffer[i] : 0;
+        output[destIndex++] += s * gain;
+    }
+    // wrap around to the beginning of the buffer if necessary
+    for (i = 0;destIndex < len;i++)
+    {
+        float s = delay + len - destIndex <= numSamples ? buffer[i] : 0;
+        output[destIndex++] += s * gain;
     }
 }
 
@@ -119,57 +123,52 @@ void CircularBuffer::sumWithSamplesRamped
         sumWithSamples(delay, output, len, start);
         return;
     }
-    if (len > buffer.size())
-        throw std::invalid_argument("Too many delayed samples requested");
-    if (delay + len > buffer.size())
-        throw std::invalid_argument("Delay value too long");
+    // setup counters and boundaries
+    size_t i = leastRecentSample - delay - len;
+    if (i > buffer.size())
+        i += buffer.size(); // correct underflow
+    size_t limit = juce::jmin(i + len, buffer.size());
+    size_t destIndex = 0;
     float gain = start;
     float gainStep = (end - start) / len;
-    for (size_t i = 0;i < len;i++)
+    // loop through the samples
+    for (;i < limit;i++)
     {
-        size_t curDelay = delay + len - 1 - i;
-        if (curDelay >= numSamples)
-            continue;
-        if (mostRecentSample >= curDelay)
-        {
-            output[i] += buffer[mostRecentSample - curDelay] * gain;
-        }
-        else
-        {
-            float s = buffer[buffer.size() + mostRecentSample - curDelay];
-            output[i] += s * gain;
-        }
         gain += gainStep;
+        float s = delay + len - destIndex <= numSamples ? buffer[i] : 0;
+        output[destIndex++] += s * gain;
+    }
+    // wrap around to the beginning of the buffer if necessary
+    for (i = 0;destIndex < len;i++)
+    {
+        gain += gainStep;
+        float s = delay + len - destIndex <= numSamples ? buffer[i] : 0;
+        output[destIndex++] += s * gain;
     }
 }
-
 
 // === Manipulate Samples =====================================================
 void CircularBuffer::applyGainToSamples(size_t delay, size_t len, float gain)
 {
-    if (len > buffer.size())
-        throw std::invalid_argument("Too many delayed samples requested");
-    if (delay + len > buffer.size())
-        throw std::invalid_argument("Delay value too long");
-    if (juce::approximatelyEqual(gain, 1.0f))
+    if (delay > numSamples || juce::approximatelyEqual(gain, 1.0f))
         return;
-    size_t index = mostRecentSample - delay;
-    if (index > buffer.size())
-        index += buffer.size(); // if index underflowed, overflow it back
-    for (size_t i = 0;i < len;i++)
-    {
-        buffer[index] *= gain;
-        index = (index + 1) % buffer.size();
-    }
+    // setup counters and boundaries
+    size_t start = leastRecentSample - delay - len;
+    if (start > buffer.size())
+        start += buffer.size(); // correct underflow
+    size_t limit = juce::jmin(start + len, buffer.size());
+    // loop through the samples
+    for (size_t i = start;i < limit;i++)
+        buffer[i] *= gain;
+    // wrap around to the beginning of the buffer if necessary
+    size_t wrap = start + len - limit;
+    for (size_t i = 0;i < wrap;i++)
+        buffer[i] *= gain;
 }
 
 void CircularBuffer::applyGainToSamples
 (size_t delay, size_t len, float start, float end)
 {
-    if (len > buffer.size())
-        throw std::invalid_argument("Too many delayed samples requested");
-    if (delay + len > buffer.size())
-        throw std::invalid_argument("Delay value too long");
     bool startIsOne = juce::approximatelyEqual(start, 1.0f);
     bool endIsOne = juce::approximatelyEqual(end, 1.0f);
     if (startIsOne && endIsOne)
@@ -179,15 +178,24 @@ void CircularBuffer::applyGainToSamples
         applyGainToSamples(delay, len, start);
         return;
     }
-    size_t index = mostRecentSample - delay;
-    if (index > buffer.size())
-        index += buffer.size(); // if index underflowed, overflow it back
+    // setup counters and boundaries
+    size_t startIndex = leastRecentSample - delay - len;
+    if (startIndex > buffer.size())
+        startIndex += buffer.size(); // correct underflow
+    size_t limit = juce::jmin(startIndex + len, buffer.size());
     float gainStep = (end - start) / len;
-    for (size_t i = 0;i < len;i++)
+    // loop through the samples
+    for (size_t i = startIndex;i < limit;i++)
     {
         start += gainStep;
-        buffer[index] *= start;
-        index = (index + 1) % buffer.size();
+        buffer[i] *= start;
+    }
+    // wrap around to the beginning of the buffer if necessary
+    size_t wrap = startIndex + len - limit;
+    for (size_t i = 0;i < wrap;i++)
+    {
+        start += gainStep;
+        buffer[i] *= start;
     }
 }
 
@@ -195,19 +203,15 @@ void CircularBuffer::applyGainToSamples
 void CircularBuffer::applyFilterToSamples
 (size_t delay, size_t len, Filter* filter)
 {
-    TRACE_EVENT_BEGIN("dsp", "filter");
-    if (len > buffer.size())
-        throw std::invalid_argument("Too many delayed samples requested");
-    if (delay + len > buffer.size())
-        throw std::invalid_argument("Delay value too long");
     // get bounds of area to process
-    size_t start = mostRecentSample - delay;
+    size_t start = leastRecentSample - delay - len;
     size_t end = start + len;
     // handle underflow in bounds
     if (start > buffer.size())
         start += buffer.size();
     if (end > buffer.size())
         end += buffer.size();
+    // process samples
     if (start > end && end != 0)
     {
         filter->processSamples(buffer.data() + start, buffer.size() - start);
@@ -217,21 +221,18 @@ void CircularBuffer::applyFilterToSamples
     {
         filter->processSamples(buffer.data() + start, len);
     }
-    TRACE_EVENT_END("dsp");
 }
 
 // === Other Operations =======================================================
 void CircularBuffer::clear()
 {
-    mostRecentSample = 0;
+    leastRecentSample = 0;
     numSamples = 0;
 }
 
 void CircularBuffer::resize(size_t newLength)
 {
-    if (newLength == 0)
-        throw std::invalid_argument("Cannot have CircularBuffer of size 0");
-    buffer.resize(newLength);
+    buffer.resize(juce::jmax(newLength, 16UL));
     clear();
 }
 

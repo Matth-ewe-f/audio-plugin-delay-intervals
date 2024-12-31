@@ -36,6 +36,6 @@ public:
     
 private:
     std::vector<float> buffer;
-    size_t mostRecentSample;
+    size_t leastRecentSample;
     size_t numSamples;
 };
