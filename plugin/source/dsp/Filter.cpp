@@ -5,32 +5,38 @@ using Coefficients = juce::dsp::IIR::Coefficients<float>;
 // === Lifecycle ==============================================================
 Filter::Filter() : Filter(44100, 20, 20000) { }
 
-Filter::Filter(double sampleRate, float low, float high) : smoothGrain(10)
+Filter::Filter(double sampleRate, float low, float high)
+    : smoothGrain(10), tempBuffer(128)
 {
     highPass.coefficients = Coefficients::makeHighPass(sampleRate, low);
     highPassFreq.setCurrentAndTargetValue(low);
     lowPass.coefficients = Coefficients::makeLowPass(sampleRate, high);
     lowPassFreq.setCurrentAndTargetValue(high);
+    smoothMix.setCurrentAndTargetValue(1);
 }
 
 Filter::~Filter()
 {
     tree->removeParameterListener(highPassParam, this);
     tree->removeParameterListener(lowPassParam, this);
+    tree->removeParameterListener(mixParam, this);
 }
 
 // === Parameters =============================================================
 void Filter::attachToParameters
 (juce::AudioProcessorValueTreeState* state, const std::string& highPassParamId,
-const std::string& lowPassParamId)
+const std::string& lowPassParamId, const std::string& mixParamId)
 {
     state->addParameterListener(highPassParamId, this);
     state->addParameterListener(lowPassParamId, this);
+    state->addParameterListener(mixParamId, this);
     highPassFreq.setTargetValue(*state->getRawParameterValue(highPassParamId));
     lowPassFreq.setTargetValue(*state->getRawParameterValue(lowPassParamId));
+    smoothMix.setTargetValue(*state->getRawParameterValue(mixParamId) / 100);
     tree = state;
     highPassParam = highPassParamId;
     lowPassParam = lowPassParamId;
+    mixParam = mixParamId;
 }
 
 void Filter::parameterChanged(const juce::String& param, float value)
@@ -39,6 +45,8 @@ void Filter::parameterChanged(const juce::String& param, float value)
         highPassFreq.setTargetValue(value);
     else if (param.compare(lowPassParam) == 0)
         lowPassFreq.setTargetValue(value);
+    else if (param.compare(mixParam) == 0)
+        smoothMix.setTargetValue(value / 100);
 }
 
 // === Process Audio ==========================================================
@@ -54,25 +62,19 @@ void Filter::prepare(const dsp::ProcessSpec& spec)
     lowPass.prepare(spec);
     highPassFreq.reset((int) spec.maximumBlockSize);
     lowPassFreq.reset((int) spec.maximumBlockSize);
+    tempBuffer.resize(spec.maximumBlockSize);
     lastSampleRate = spec.sampleRate;
 }
 
 float Filter::processSample(float sample)
 {
     if (highPassFreq.isSmoothing())
-    {
-        float f = highPassFreq.getNextValue();
-        double s = lastSampleRate;
-        highPass.coefficients = Coefficients::makeFirstOrderHighPass(s, f);
-    }
+        highPass.coefficients = makeHighPass(highPassFreq.getNextValue());
     if (lowPassFreq.isSmoothing())
-    {
-        float f = lowPassFreq.getNextValue();
-        double s = lastSampleRate;
-        lowPass.coefficients = Coefficients::makeFirstOrderLowPass(s, f);
-    }
+        lowPass.coefficients = makeLowPass(lowPassFreq.getNextValue());
     float wet = lowPass.processSample(highPass.processSample(sample));
-    return wet;
+    float mix = smoothMix.getNextValue();
+    return (sample * (1 - mix)) + (wet * mix);
 }
 
 void Filter::processSamples(float* samples, size_t length)
@@ -107,10 +109,20 @@ void Filter::processSamples(float* samples, size_t length)
     }
     else
     {
+        // copy the dry signal to the temporary buffer (for mixing)
+        for (size_t i = 0;i < length;i++)
+            tempBuffer[i] = samples[i];
+        // process the signal
         juce::dsp::AudioBlock<float> block(&samples, 1, length);
         juce::dsp::ProcessContextReplacing<float> context(block);
         lowPass.process(context);
         highPass.process(context);
+        // mix the dry and wet signal
+        for (size_t i = 0;i < length;i++)
+        {
+            float mix = smoothMix.getNextValue();
+            samples[i] = (samples[i] * mix) + (tempBuffer[i] * (1 - mix));
+        }
     }
 }
 

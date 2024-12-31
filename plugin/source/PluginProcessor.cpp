@@ -24,16 +24,18 @@ PluginProcessor::PluginProcessor()
 #if PERFETTO
     MelatoninPerfetto::get().beginSession();
 #endif
-	std::string leftHigh = "left-high-pass";
-	std::string leftLow = "left-low-pass";
-	std::string rightHigh = "right-high-pass";
-	std::string rightLow = "right-low-pass";
+	std::string lHigh = "left-high-pass";
+	std::string lLow = "left-low-pass";
+	std::string lMix = "left-filter-mix";
+	std::string rHigh = "right-high-pass";
+	std::string rLow = "right-low-pass";
+	std::string rMix = "right-filter-mix";
 	for (int i = 0;i < maxIntervals;i++)
 	{
 		leftAmps[i].listenTo(&tree, getIdForLeftIntervalAmp(i));
 		rightAmps[i].listenTo(&tree, getIdForRightIntervalAmp(i));
-		leftFilters[i].attachToParameters(&tree, leftHigh, leftLow);
-		rightFilters[i].attachToParameters(&tree, rightHigh, rightLow);
+		leftFilters[i].attachToParameters(&tree, lHigh, lLow, lMix);
+		rightFilters[i].attachToParameters(&tree, rHigh, rLow, rMix);
 	}
 	lastDelay = getDelaySamples();
 	lastIntervals = getCurrentNumIntervals();
