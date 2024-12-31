@@ -213,8 +213,9 @@ void CircularBuffer::applyFilterToSamples
     // process samples
     if (start > end && end != 0)
     {
-        filter->processSamples(buffer.data() + start, buffer.size() - start);
-        filter->processSamples(buffer.data(), end);
+        float* data = buffer.data();
+        filter->processSamples(data + start, buffer.size() - start);
+        filter->processSamples(data, end);
     }
     else
     {

@@ -29,8 +29,15 @@ private:
     dsp::IIR::Filter<float> lowPass;
     juce::SmoothedValue<float> highPassFreq;
     juce::SmoothedValue<float> lowPassFreq;
+    const size_t smoothGrain;
     double lastSampleRate;
     juce::AudioProcessorValueTreeState* tree;
     std::string highPassParam;
     std::string lowPassParam;
+
+    juce::ReferenceCountedObjectPtr<dsp::IIR::Coefficients<float>>
+    makeHighPass(float freq);
+    juce::ReferenceCountedObjectPtr<dsp::IIR::Coefficients<float>>
+    makeLowPass(float freq);
+
 };

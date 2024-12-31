@@ -5,7 +5,7 @@ using Coefficients = juce::dsp::IIR::Coefficients<float>;
 // === Lifecycle ==============================================================
 Filter::Filter() : Filter(44100, 20, 20000) { }
 
-Filter::Filter(double sampleRate, float low, float high)
+Filter::Filter(double sampleRate, float low, float high) : smoothGrain(10)
 {
     highPass.coefficients = Coefficients::makeHighPass(sampleRate, low);
     highPassFreq.setCurrentAndTargetValue(low);
@@ -71,29 +71,58 @@ float Filter::processSample(float sample)
         double s = lastSampleRate;
         lowPass.coefficients = Coefficients::makeFirstOrderLowPass(s, f);
     }
-    return lowPass.processSample(highPass.processSample(sample));
+    float wet = lowPass.processSample(highPass.processSample(sample));
+    return wet;
 }
 
 void Filter::processSamples(float* samples, size_t length)
 {
-    if (highPassFreq.isSmoothing())
+    // if either filter is changing its frequency, smooth that change
+    if (highPassFreq.isSmoothing() || lowPassFreq.isSmoothing())
     {
-        float target = highPassFreq.getTargetValue();
-        highPass.coefficients = Coefficients::makeFirstOrderHighPass(
-            lastSampleRate, target
-        );
-        highPassFreq.setCurrentAndTargetValue(target);
+        size_t processed = 0;
+        while (processed < length)
+        {
+            // create the block of samples to process
+            size_t blockLen = juce::jmin(length - processed, smoothGrain);
+            float* ptr = samples + processed;
+            juce::dsp::AudioBlock<float> block(&ptr, 1, blockLen);
+            juce::dsp::ProcessContextReplacing<float> context(block);
+            // handle frequency smoothing
+            if (highPassFreq.isSmoothing())
+            {
+                float f = highPassFreq.skip((int) blockLen);
+                highPass.coefficients = makeHighPass(f);
+            }
+            if (lowPassFreq.isSmoothing())
+            {
+                float f = lowPassFreq.skip((int) blockLen);
+                lowPass.coefficients = makeLowPass(f);
+            }
+            // process the samples
+            lowPass.process(context);
+            highPass.process(context);
+            processed += blockLen;
+        }
     }
-    if (lowPassFreq.isSmoothing())
+    else
     {
-        float target = lowPassFreq.getTargetValue();
-        lowPass.coefficients = Coefficients::makeFirstOrderLowPass(
-            lastSampleRate, target
-        );
-        lowPassFreq.setCurrentAndTargetValue(target);
+        juce::dsp::AudioBlock<float> block(&samples, 1, length);
+        juce::dsp::ProcessContextReplacing<float> context(block);
+        lowPass.process(context);
+        highPass.process(context);
     }
-    juce::dsp::AudioBlock<float> block(&samples, 1, length);
-    juce::dsp::ProcessContextReplacing<float> context(block);
-    lowPass.process(context);
-    highPass.process(context);
+}
+
+// === Private ================================================================
+juce::ReferenceCountedObjectPtr<dsp::IIR::Coefficients<float>>
+Filter::makeHighPass(float freq)
+{
+    return Coefficients::makeHighPass(lastSampleRate, freq);
+}
+
+juce::ReferenceCountedObjectPtr<dsp::IIR::Coefficients<float>>
+Filter::makeLowPass(float freq)
+{
+    return Coefficients::makeLowPass(lastSampleRate, freq);
 }
