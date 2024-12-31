@@ -4,6 +4,8 @@
 // forward declarations
 class Filter;
 
+// if any function calls are given length or delay arguments that are larger
+// than the capacity of the buffer, they may result in undefined behavior
 class CircularBuffer
 {
 public:
@@ -36,6 +38,6 @@ public:
     
 private:
     std::vector<float> buffer;
-    size_t mostRecentSample;
+    size_t leastRecentSample;
     size_t numSamples;
 };
