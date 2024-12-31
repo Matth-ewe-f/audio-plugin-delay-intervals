@@ -125,9 +125,15 @@ std::unique_ptr<juce::AudioParameterFloat> createDelayAmpParameter
         juce::ignoreUnused(min, max);
         return value <= 0 ? 0 : (1.3022f / (1.75f - value)) - 0.7363f;
     };
+    juce::AudioParameterFloatAttributes attr;
+    attr = attr.withStringFromValueFunction([] (float value, int len)
+    {
+        juce::ignoreUnused(len);
+        return std::format("{:.1f}", value * 100) + "%";
+    });
     juce::NormalisableRange<float> range(0, 1, denormalize, normalize);
     return std::make_unique<juce::AudioParameterFloat>(
-        id, name, range, defaultVal
+        id, name, range, defaultVal, attr
     );
 }
 
