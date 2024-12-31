@@ -79,7 +79,10 @@ float Filter::processSample(float sample)
 
 void Filter::processSamples(float* samples, size_t length)
 {
-    // if either filter is changing its frequency, smooth that change
+    // copy the dry signal to the temporary buffer (for mixing)
+    for (size_t i = 0;i < length;i++)
+        tempBuffer[i] = samples[i];
+    // process the signal, smoothing frequency changes if necessary
     if (highPassFreq.isSmoothing() || lowPassFreq.isSmoothing())
     {
         size_t processed = 0;
@@ -109,20 +112,16 @@ void Filter::processSamples(float* samples, size_t length)
     }
     else
     {
-        // copy the dry signal to the temporary buffer (for mixing)
-        for (size_t i = 0;i < length;i++)
-            tempBuffer[i] = samples[i];
-        // process the signal
         juce::dsp::AudioBlock<float> block(&samples, 1, length);
         juce::dsp::ProcessContextReplacing<float> context(block);
         lowPass.process(context);
         highPass.process(context);
-        // mix the dry and wet signal
-        for (size_t i = 0;i < length;i++)
-        {
-            float mix = smoothMix.getNextValue();
-            samples[i] = (samples[i] * mix) + (tempBuffer[i] * (1 - mix));
-        }
+    }
+    // mix the dry and wet signal
+    for (size_t i = 0;i < length;i++)
+    {
+        float mix = smoothMix.getNextValue();
+        samples[i] = (samples[i] * mix) + (tempBuffer[i] * (1 - mix));
     }
 }
 
