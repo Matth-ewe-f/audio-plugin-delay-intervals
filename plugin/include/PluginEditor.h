@@ -46,8 +46,8 @@ private:
     int rightDelayAmpsLength = 16;
     CtmToggle resetLeft;
     CtmToggle resetRight;
-    CtmToggle copyLeft;
-    CtmToggle copyRight;
+    CtmToggle matchLeft;
+    CtmToggle matchRight;
     // === Global Controls (Right Side) =======================================
     ParameterToggle linkAmps;
     ParameterToggle linkFilters;
@@ -72,14 +72,14 @@ private:
     static const int delayAmpsAreaHeight;
     static const int delayAmpsMarginX;
     static const int delayAmpsMarginY;
-    static const int filterMarginLeft;
-    static const int filterMarginRight;
+    static const int filterY;
+    static const int filterMargin;
     static const int filterKnobW;
     static const int filterKnobH;
     static const int filterMixMargin;
-    static const int resetButtonWidth;
-    static const int copyButtonWidth;
-    static const int col2ButtonHeight;
+    static const int col2ButtonW;
+    static const int col2ButtonH;
+    static const int col2ButtonPad;
     static const int col2ButtonMargin;
     static const int col3Width;
     static const int col3KnobW;
