@@ -334,6 +334,64 @@ void PluginProcessor::processBlock
 	lastLoop = loop;
 }
 
+// === Operations =========================================================
+void PluginProcessor::resetLeftAmps()
+{
+	for (size_t i = 0;i < maxIntervals;i++)
+	{
+		std::string id = getIdForLeftIntervalAmp((int) i);
+		juce::RangedAudioParameter* param = tree.getParameter(id);
+		param->beginChangeGesture();
+		param->setValueNotifyingHost(param->getDefaultValue());
+		param->endChangeGesture();
+	}
+}
+
+void PluginProcessor::resetRightAmps()
+{
+	for (size_t i = 0;i < maxIntervals;i++)
+	{
+		std::string id = getIdForRightIntervalAmp((int) i);
+		juce::RangedAudioParameter* param = tree.getParameter(id);
+		param->beginChangeGesture();
+		param->setValueNotifyingHost(param->getDefaultValue());
+		param->endChangeGesture();
+	}
+}
+
+void PluginProcessor::copyLeftAmpsToRight()
+{
+	for (size_t i = 0;i < maxIntervals;i++)
+	{
+		std::string leftId = getIdForLeftIntervalAmp((int) i);
+		juce::RangedAudioParameter* left = tree.getParameter(leftId);
+		std::string rightId = getIdForRightIntervalAmp((int) i);
+		juce::RangedAudioParameter* right = tree.getParameter(rightId);
+		right->beginChangeGesture();
+		right->setValueNotifyingHost(left->getValue());
+		right->endChangeGesture();
+	}
+}
+
+void PluginProcessor::copyRightAmpsToLeft()
+{
+	for (size_t i = 0;i < maxIntervals;i++)
+	{
+		std::string leftId = getIdForLeftIntervalAmp((int) i);
+		juce::RangedAudioParameter* left = tree.getParameter(leftId);
+		std::string rightId = getIdForRightIntervalAmp((int) i);
+		juce::RangedAudioParameter* right = tree.getParameter(rightId);
+		left->beginChangeGesture();
+		left->setValueNotifyingHost(right->getValue());
+		left->endChangeGesture();
+	}
+}
+
+void PluginProcessor::notifyHostOfStateChange()
+{
+	updateHostDisplay(ChangeDetails().withNonParameterStateChanged(true));
+}
+
 // === Factory Functions ======================================================
 juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter()
 {

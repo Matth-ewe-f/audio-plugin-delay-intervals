@@ -58,10 +58,17 @@ public:
 #endif
 
     // === Processing Audio ===================================================
-    void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
-    void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     using AudioProcessor::processBlock;
+
+    // === Operations =========================================================
+    void resetLeftAmps();
+    void resetRightAmps();
+    void copyLeftAmpsToRight();
+    void copyRightAmpsToLeft();
+    void notifyHostOfStateChange();
 
     // === State ==============================================================
     void getStateInformation (juce::MemoryBlock& destData) override;

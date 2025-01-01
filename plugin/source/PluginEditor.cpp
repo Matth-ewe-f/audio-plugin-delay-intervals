@@ -125,18 +125,39 @@ void PluginEditor::setupChannels()
     resetLeft.setText("RESET");
     resetLeft.setDisplayAlwaysUp(true);
     resetLeft.setFixedFontSize(13);
+    PluginProcessor* processorPtr = &processorRef;
+    resetLeft.onClick = [processorPtr] ()
+    {
+        processorPtr->resetLeftAmps();
+        processorPtr->notifyHostOfStateChange();
+    };
     addAndMakeVisible(resetLeft);
     resetRight.setText("RESET");
     resetRight.setDisplayAlwaysUp(true);
     resetRight.setFixedFontSize(13);
+    resetRight.onClick = [processorPtr] ()
+    {
+        processorPtr->resetRightAmps();
+        processorPtr->notifyHostOfStateChange();
+    };
     addAndMakeVisible(resetRight);
     matchLeft.setText("MATCH");
     matchLeft.setDisplayAlwaysUp(true);
     matchLeft.setFixedFontSize(13);
+    matchLeft.onClick = [processorPtr] ()
+    {
+        processorPtr->copyRightAmpsToLeft();
+        processorPtr->notifyHostOfStateChange();
+    };
     addAndMakeVisible(matchLeft);
     matchRight.setText("MATCH");
     matchRight.setDisplayAlwaysUp(true);
     matchRight.setFixedFontSize(13);
+    matchRight.onClick = [processorPtr] ()
+    {
+        processorPtr->copyLeftAmpsToRight();
+        processorPtr->notifyHostOfStateChange();
+    };
     addAndMakeVisible(matchRight);
     // setup delay amplitude sliders
     for (int i = 0;i < leftDelayAmpsLength;i++)
