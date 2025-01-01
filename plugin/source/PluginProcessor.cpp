@@ -389,7 +389,7 @@ void PluginProcessor::copyRightAmpsToLeft()
 
 void PluginProcessor::notifyHostOfStateChange()
 {
-	updateHostDisplay(ChangeDetails().withNonParameterStateChanged(true));
+	updateHostDisplay(ChangeDetails().withParameterInfoChanged(true));
 }
 
 // === Factory Functions ======================================================
@@ -415,7 +415,10 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes)
 {
 	std::unique_ptr<juce::XmlElement> xml(getXmlFromBinary(data, sizeInBytes));
 	if (xml.get() != nullptr && xml->hasTagName(tree.state.getType()))
+	{
 		tree.replaceState(juce::ValueTree::fromXml(*xml));
+		notifyHostOfStateChange();
+	}
 }
 
 // === Private Helper =========================================================
