@@ -75,6 +75,7 @@ void CtmToggle::paintButton(juce::Graphics& g, bool hover, bool click)
     int y = bounds.getY() + 1;
     int w = bounds.getWidth() - 2;
     int h = bounds.getHeight() - 2;
+    int r = 4 + ((h - 20) / 8);
     // draw the button background
     if (!(untoggledColor) && (toggle || alwaysUp))
     {
@@ -89,7 +90,7 @@ void CtmToggle::paintButton(juce::Graphics& g, bool hover, bool click)
     }
     else
         g.setColour(findColour(CtmColourIds::untoggledColourId));
-    g.fillRoundedRectangle(x, y, w, h, 4);
+    g.fillRoundedRectangle(x, y, w, h, r);
     // draw the highlights on the top of the button
     juce::Colour light;
     if (click || (!toggle && !alwaysUp))
@@ -97,25 +98,25 @@ void CtmToggle::paintButton(juce::Graphics& g, bool hover, bool click)
     else 
         light = getHighlightColor();
     g.setColour(light);
-    g.drawRoundedRectangle(x, y + 1, w, h - 1, 4, 1);
+    g.drawRoundedRectangle(x, y + 1, w, h - 1, r, 1);
     light = light.withMultipliedAlpha(0.7f);
     g.setColour(light);
-    g.drawRoundedRectangle(x, y + 2, w, h - 3, 4, 1);
+    g.drawRoundedRectangle(x, y + 2, w, h - 3, r, 1);
     // draw the outline of the button
     g.setColour(findColour(CtmColourIds::darkOutlineColourId));
-    g.drawRoundedRectangle(x, y, w, h, 4, 1);
+    g.drawRoundedRectangle(x, y, w, h, r, 1);
     // draw the button text
     g.setColour(juce::Colours::white);
     g.setFont(fontSize == -1 ? (h / 2) + 2 : fontSize);
     auto justify = juce::Justification::centred;
     std::string s = toggle ? toggledText : untoggledText;
     int textY = !(toggle || alwaysUp) || (alwaysUp && click) ? y + 4 : y + 3;
-    g.drawText(s, x + 2, textY, w - 4, h - 8, justify, false);
+    g.drawFittedText(s, x + 2, textY, w - 4, h - 8, justify, 3, 0.8f);
     // darken the button it it's been clicked
     if (click)
     {
         g.setColour(juce::Colours::black.withAlpha(0.08f));
-        g.fillRoundedRectangle(x + 1, y + 1, w - 2, h - 2, 4);
+        g.fillRoundedRectangle(x + 1, y + 1, w - 2, h - 2, r);
     }
 }
 #pragma GCC diagnostic pop

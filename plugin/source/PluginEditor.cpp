@@ -5,22 +5,32 @@
 const int PluginEditor::col1Width = 120;
 const int PluginEditor::col1KnobW = 72;
 const int PluginEditor::col1KnobH = 80;
-const int PluginEditor::toggleW = 30;
-const int PluginEditor::toggleH = 22;
-const int PluginEditor::toggleWideW = 40;
-const int PluginEditor::togglePadX = 2;
-const int PluginEditor::togglePadY = 8;
+const int PluginEditor::syncToggleW = 32;
+const int PluginEditor::syncToggleH = 22;
+const int PluginEditor::syncTogglePadX = 2;
+const int PluginEditor::syncTogglePadY = 8;
+const int PluginEditor::loopToggleW = 40;
 const int PluginEditor::col2Width = 411;
 const int PluginEditor::col2Margin = 16;
 const int PluginEditor::delayAmpsAreaHeight = 64;
 const int PluginEditor::delayAmpsMarginX = 14;
 const int PluginEditor::delayAmpsMarginY = 12;
+const int PluginEditor::filterMarginLeft = 12;
+const int PluginEditor::filterMarginRight = 22;
 const int PluginEditor::filterKnobW = 58;
 const int PluginEditor::filterKnobH = 68;
 const int PluginEditor::filterMixMargin = 20;
+const int PluginEditor::resetButtonWidth = 52;
+const int PluginEditor::copyButtonWidth = 60;
+const int PluginEditor::col2ButtonHeight = 36;
+const int PluginEditor::col2ButtonMargin = 10;
 const int PluginEditor::col3Width = 112;
 const int PluginEditor::col3KnobW = 72;
 const int PluginEditor::col3KnobH = 80;
+const int PluginEditor::col3KnobMargin = 16;
+const int PluginEditor::col3ToggleW = 56;
+const int PluginEditor::col3ToggleH = 36;
+const int PluginEditor::col3ToggleMargin = 8;
 const int PluginEditor::height = 304;
 const int PluginEditor::paddingY = 8;
 
@@ -111,6 +121,23 @@ void PluginEditor::setupChannels()
     rightFilterMix.setTightText();
     rightFilterMix.attachToParameter(&processorRef.tree, "right-filter-mix");
     addParameterControl(&rightFilterMix);
+    // setup buttons
+    resetLeft.setText("RESET LEFT");
+    resetLeft.setDisplayAlwaysUp(true);
+    resetLeft.setFixedFontSize(13);
+    addAndMakeVisible(resetLeft);
+    resetRight.setText("RESET RIGHT");
+    resetRight.setDisplayAlwaysUp(true);
+    resetRight.setFixedFontSize(13);
+    addAndMakeVisible(resetRight);
+    copyLeft.setText("COPY TO RIGHT");
+    copyLeft.setDisplayAlwaysUp(true);
+    copyLeft.setFixedFontSize(13);
+    addAndMakeVisible(copyLeft);
+    copyRight.setText("COPY TO LEFT");
+    copyRight.setDisplayAlwaysUp(true);
+    copyRight.setFixedFontSize(13);
+    addAndMakeVisible(copyRight);
     // setup delay amplitude sliders
     for (int i = 0;i < leftDelayAmpsLength;i++)
     {
@@ -132,6 +159,12 @@ void PluginEditor::setupChannels()
 
 void PluginEditor::setupRightSideGlobals()
 {
+    linkAmps.toggle.setText("LINK DELAYS");
+    linkAmps.toggle.setFixedFontSize(13);
+    addAndMakeVisible(linkAmps.toggle);
+    linkFilters.toggle.setText("LINK FILTERS");
+    linkFilters.toggle.setFixedFontSize(13);
+    addAndMakeVisible(linkFilters.toggle);
     falloff.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
     falloff.setTitleText("Falloff");
     falloff.attachToParameter(&processorRef.tree, "falloff");
@@ -199,22 +232,22 @@ void PluginEditor::layoutLeftSideGlobals()
 {
     // delay time controls
     int halfHeight = (getHeight() - (paddingY * 2)) / 2;
-    int delaySectionH = col1KnobH + togglePadY + toggleH;
+    int delaySectionH = col1KnobH + syncTogglePadY + syncToggleH;
     int delaySectionY = paddingY + ((halfHeight - delaySectionH) / 2);
     int x = (col1Width - col1KnobW) / 2;
     delayTime.setBounds(x, delaySectionY, col1KnobW, col1KnobH);
-    int noTempoX = (col1Width - (toggleW * 2) - togglePadX) / 2;
-    int delayToggleY = delaySectionY + col1KnobH + togglePadY;
-    noTempoSync.setBounds(noTempoX, delayToggleY, toggleW, toggleH);
-    int tempoX = noTempoX + toggleW + togglePadX;
-    tempoSync.setBounds(tempoX, delayToggleY, toggleW, toggleH);
+    int noTempoX = (col1Width - (syncToggleW * 2) - syncTogglePadX) / 2;
+    int delayToggleY = delaySectionY + col1KnobH + syncTogglePadY;
+    noTempoSync.setBounds(noTempoX, delayToggleY, syncToggleW, syncToggleH);
+    int tempoX = noTempoX + syncToggleW + syncTogglePadX;
+    tempoSync.setBounds(tempoX, delayToggleY, syncToggleW, syncToggleH);
     // number of intervals controls
-    int intervalsH = col1KnobH + togglePadY + toggleH;
+    int intervalsH = col1KnobH + syncTogglePadY + syncToggleH;
     int intervalsY = paddingY + halfHeight + ((halfHeight - intervalsH) / 2);
     numIntervals.setBounds(x, intervalsY, col1KnobW, col1KnobH);
-    int loopX = (col1Width - toggleWideW) / 2;
-    int loopY = intervalsY + col1KnobH + togglePadY;
-    loopButton.setBounds(loopX, loopY, toggleWideW, toggleH);
+    int loopX = (col1Width - loopToggleW) / 2;
+    int loopY = intervalsY + col1KnobH + syncTogglePadY;
+    loopButton.setBounds(loopX, loopY, loopToggleW, syncToggleH);
 }
 
 void PluginEditor::layoutChannelFilters()
@@ -223,7 +256,9 @@ void PluginEditor::layoutChannelFilters()
     int xStart = col1Width + col2Margin;
     int filterAreaW = (col2Width - (2 * col2Margin));
     int filterW = filterKnobW * 3 + filterMixMargin;
-    int x1 = xStart + (filterAreaW - filterW) / 2;
+    int buttonsW = resetButtonWidth + col2ButtonMargin + copyButtonWidth;
+    int totalW = filterMarginLeft + filterW + filterMarginRight + buttonsW;
+    int x1 = xStart + ((filterAreaW - totalW) / 2) + filterMarginLeft;
     int y1 = 6;
     int y2 = getHeight() - filterKnobH - 6;
     // lay out filters
@@ -235,6 +270,15 @@ void PluginEditor::layoutChannelFilters()
     int x3 = x2 + filterKnobW + filterMixMargin;
     leftFilterMix.setBounds(x3, y1, filterKnobW, filterKnobH);
     rightFilterMix.setBounds(x3, y2, filterKnobW, filterKnobH);
+    // lay out buttons
+    y1 += (filterKnobH - col2ButtonHeight) / 2;
+    y2 += (filterKnobH - col2ButtonHeight) / 2;
+    int x4 = x1 + filterW + filterMarginRight;
+    resetLeft.setBounds(x4, y1, resetButtonWidth, col2ButtonHeight);
+    resetRight.setBounds(x4, y2, resetButtonWidth, col2ButtonHeight);
+    int x5 = x4 + resetButtonWidth + col2ButtonMargin;
+    copyLeft.setBounds(x5, y1, copyButtonWidth, col2ButtonHeight);
+    copyRight.setBounds(x5, y2, copyButtonWidth, col2ButtonHeight);
 }
 
 void PluginEditor::layoutDelayAmps()
@@ -279,12 +323,18 @@ void PluginEditor::layoutDelayAmps()
 
 void PluginEditor::layoutRightSideGlobals()
 {
-    int x = col1Width + col2Width + (col3Width - col3KnobW) / 2;
-    int halfHeight = (getHeight() - (paddingY * 2)) / 2;
-    int y1 = paddingY + 2 * ((halfHeight - col3KnobH) / 3);
-    falloff.setBounds(x, y1, col3KnobW, col3KnobH);
-    int y2 = paddingY + halfHeight + (halfHeight - col3KnobH) / 3;
-    wetDry.setBounds(x, y2, col3KnobW, col3KnobH);
+    int toggleX = col1Width + col2Width + (col3Width - col3ToggleW) / 2;
+    int knobX = col1Width + col2Width + (col3Width - col3KnobW) / 2;
+    int totalH = 2 * col3ToggleH + col3ToggleMargin
+        + 2 * (col3KnobH + col3KnobMargin);
+    int y1 = (getHeight() - totalH) / 2;
+    linkFilters.setBounds(toggleX, y1, col3ToggleW, col3ToggleH);
+    int y2 = y1 + col3ToggleH + col3ToggleMargin;
+    linkAmps.setBounds(toggleX, y2, col3ToggleW, col3ToggleH);
+    int y3 = y2 + col3ToggleH + col3KnobMargin;
+    falloff.setBounds(knobX, y3, col3KnobW, col3KnobH);
+    int y4 = y3 + col3KnobH + col3KnobMargin;
+    wetDry.setBounds(knobX, y4, col3KnobW, col3KnobH);
 }
 
 // == Drawing Functions ======================================================
@@ -292,9 +342,9 @@ void PluginEditor::drawLeftSideGlobals(juce::Graphics& g)
 {
     // draw background for delay time controls area
     g.setColour(findColour(CtmColourIds::darkBgColourId));
-    int x = (col1Width - (toggleW * 2) - togglePadX) / 2;
-    int w = (toggleW * 2) + togglePadX;
-    int h = col1KnobH + togglePadY + toggleH;
+    int x = (col1Width - (syncToggleW * 2) - syncTogglePadX) / 2;
+    int w = (syncToggleW * 2) + syncTogglePadX;
+    int h = col1KnobH + syncTogglePadY + syncToggleH;
     int halfHeight = (getHeight() - (paddingY * 2)) / 2;
     int y = paddingY + ((halfHeight - h) / 2);
     g.fillRoundedRectangle(x - 10, y - 6, w + 20, h + 14, 14);
@@ -344,14 +394,12 @@ void PluginEditor::drawChannels(juce::Graphics& g)
     setRadialGradient(g, trans, x + w - r, y + r, black, r, r - s);
     g.fillPath(corners);
     // draw backgrounds for filters
-
-    // int y1 = 6;
-    // int y2 = getHeight() - filterKnobH - 6;
-
     int xStart = col1Width + col2Margin;
     int filterAreaW = (col2Width - (2 * col2Margin));
     int fw = filterKnobW * 3 + filterMixMargin;
-    int x1 = xStart + (filterAreaW - fw) / 2;
+    int buttonsW = resetButtonWidth + col2ButtonMargin + copyButtonWidth;
+    int totalW = filterMarginLeft + fw + filterMarginRight + buttonsW;
+    int x1 = xStart + ((filterAreaW - totalW) / 2) + filterMarginLeft;
     int yExtra = 20;
     int y1 = 6;
     int y2 = getHeight() - filterKnobH - 6;
@@ -360,11 +408,6 @@ void PluginEditor::drawChannels(juce::Graphics& g)
     g.fillRoundedRectangle(x1 - 6, y1 - yExtra, fw + 12, fh + 6, 12);
     g.fillRoundedRectangle(x1 - 6, y2 - 6, fw + 12, fh + 6, 12);
     // draw filter text
-    // g.setColour(juce::Colours::white);
-    // g.setFont(14);
-    // auto centered = juce::Justification::centred;
-    // g.drawText("Delay Filter", x1 - 6, y1, fw + 12, 14, centered);
-    // g.drawText("Delay Filter", x1 - 6, y2, fw + 12, 14, centered);
 }
 
 void PluginEditor::drawChannelLabels(juce::Graphics& g)

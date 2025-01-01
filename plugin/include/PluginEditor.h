@@ -1,6 +1,7 @@
 #pragma once
 #include "PluginProcessor.h"
 #include "CtmLookAndFeel.h"
+#include "CtmToggle.h"
 #include "ParameterControl.h"
 #include "ParameterToggle.h"
 
@@ -43,33 +44,50 @@ private:
     int leftDelayAmpsLength = 16;
     ParameterControl rightDelayAmps[16];
     int rightDelayAmpsLength = 16;
+    CtmToggle resetLeft;
+    CtmToggle resetRight;
+    CtmToggle copyLeft;
+    CtmToggle copyRight;
+    // === Global Controls (Right Side) =======================================
+    ParameterToggle linkAmps;
+    ParameterToggle linkFilters;
+    ParameterControl falloff;
+    ParameterControl wetDry;
+    // === Info for Drawing Channel Controls ==================================
     int numDelayAmps;
     float wetRatio;
     float autoFalloffRate;
-    // === Global Controls (Right Side) =======================================
-    ParameterControl falloff;
-    ParameterControl wetDry;
 
     // === Layout Constants ===================================================
     static const int col1Width;
     static const int col1KnobW;
     static const int col1KnobH;
-    static const int toggleW;
-    static const int toggleH;
-    static const int toggleWideW;
-    static const int togglePadX;
-    static const int togglePadY;
+    static const int syncToggleW;
+    static const int syncToggleH;
+    static const int syncTogglePadX;
+    static const int syncTogglePadY;
+    static const int loopToggleW;
     static const int col2Width;
     static const int col2Margin;
     static const int delayAmpsAreaHeight;
     static const int delayAmpsMarginX;
     static const int delayAmpsMarginY;
+    static const int filterMarginLeft;
+    static const int filterMarginRight;
     static const int filterKnobW;
     static const int filterKnobH;
     static const int filterMixMargin;
+    static const int resetButtonWidth;
+    static const int copyButtonWidth;
+    static const int col2ButtonHeight;
+    static const int col2ButtonMargin;
     static const int col3Width;
     static const int col3KnobW;
     static const int col3KnobH;
+    static const int col3KnobMargin;
+    static const int col3ToggleW;
+    static const int col3ToggleH;
+    static const int col3ToggleMargin;
     static const int height;
     static const int paddingY;
 
