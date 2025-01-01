@@ -181,6 +181,14 @@ std::unique_ptr<juce::AudioParameterFloat> createTimeParameter
     );
 }
 
+std::unique_ptr<juce::AudioParameterChoice> createChoiceParameter
+(std::string id, std::string name, juce::StringArray& options, int defaultIdx)
+{
+    return std::make_unique<juce::AudioParameterChoice>(
+        id, name, options, defaultIdx
+    );
+}
+
 std::unique_ptr<juce::AudioParameterChoice> createIntChoiceParameter
 (std::string id, std::string name, juce::Array<int> options, int defaultIndex)
 {

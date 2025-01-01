@@ -59,6 +59,23 @@ PluginProcessor::createParameters()
 	parameters.add(ParameterFactory::createTimeParameter(
 		"delay-time", "Delay Time", 20, maxDelayTime, 1, 100
 	));
+	juce::StringArray options = juce::StringArray(
+		"16th triplet",
+		"16th",
+		"dotted 16th",
+		"8th triplet",
+		"8th",
+		"dotted 8th",
+		"quarter triplet",
+		"quarter",
+		"dotted quarter"
+	);
+	parameters.add(ParameterFactory::createChoiceParameter(
+		"delay-time-sync", "Delay Time (Rhythmic)", options, 4
+	));
+	parameters.add(ParameterFactory::createBoolParameter(
+		"tempo-sync", "Tempo Sync", "ON", "OFF", 0
+	));
 	parameters.add(ParameterFactory::createIntChoiceParameter(
 		"num-intervals", "Intervals", juce::Array<int>(8, maxIntervals), 1
 	));

@@ -58,8 +58,16 @@ void PluginEditor::setupLeftSideGlobals()
     delayTime.attachToParameter(&processorRef.tree, "delay-time");
     addParameterControl(&delayTime);
     noTempoSync.toggle.setText("MS");
+    noTempoSync.toggle.setRadioGroupId(1, juce::dontSendNotification);
     addAndMakeVisible(noTempoSync.toggle);
     tempoSync.toggle.setText("TP");
+    tempoSync.toggle.setRadioGroupId(1, juce::dontSendNotification);
+    tempoSync.attachToParameter(&processorRef.tree, "tempo-sync");
+    ParameterToggle* noTempoSyncPtr = &noTempoSync;
+    tempoSync.addOnToggleFunction([noTempoSyncPtr] (bool b)
+    {
+        noTempoSyncPtr->toggle.setToggleState(!b, juce::sendNotification);
+    });
     addAndMakeVisible(tempoSync.toggle);
     numIntervals.attachToParameter(&processorRef.tree, "num-intervals");
     numIntervals.setSliderStyle(juce::Slider::RotaryVerticalDrag);
