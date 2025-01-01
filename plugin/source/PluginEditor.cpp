@@ -2,11 +2,12 @@
 #include "PluginEditor.h"
 
 // === Layout Constants ===================================================
-const int PluginEditor::col1Width = 112;
+const int PluginEditor::col1Width = 120;
 const int PluginEditor::col1KnobW = 72;
 const int PluginEditor::col1KnobH = 80;
-const int PluginEditor::toggleW = 34;
+const int PluginEditor::toggleW = 30;
 const int PluginEditor::toggleH = 22;
+const int PluginEditor::toggleWideW = 40;
 const int PluginEditor::togglePadX = 2;
 const int PluginEditor::togglePadY = 8;
 const int PluginEditor::col2Width = 411;
@@ -20,7 +21,7 @@ const int PluginEditor::filterMixMargin = 20;
 const int PluginEditor::col3Width = 112;
 const int PluginEditor::col3KnobW = 72;
 const int PluginEditor::col3KnobH = 80;
-const int PluginEditor::height = 352;
+const int PluginEditor::height = 304;
 const int PluginEditor::paddingY = 8;
 
 // === Lifecycle ==============================================================
@@ -37,9 +38,7 @@ PluginEditor::PluginEditor (PluginProcessor &p)
     setupChannels();
     setupRightSideGlobals();
     // set size
-    int w = col1Width + col2Width + col3Width;
-    int h = height + (paddingY * 2);
-    setSize(w, h);
+    setSize(col1Width + col2Width + col3Width, height);
 }
 
 PluginEditor::~PluginEditor()
@@ -62,12 +61,12 @@ void PluginEditor::setupLeftSideGlobals()
     addAndMakeVisible(noTempoSync.toggle);
     tempoSync.toggle.setText("TP");
     tempoSync.toggle.setRadioGroupId(1, juce::dontSendNotification);
-    tempoSync.attachToParameter(&processorRef.tree, "tempo-sync");
     ParameterToggle* noTempoSyncPtr = &noTempoSync;
     tempoSync.addOnToggleFunction([noTempoSyncPtr] (bool b)
     {
         noTempoSyncPtr->toggle.setToggleState(!b, juce::sendNotification);
     });
+    tempoSync.attachToParameter(&processorRef.tree, "tempo-sync");
     addAndMakeVisible(tempoSync.toggle);
     numIntervals.attachToParameter(&processorRef.tree, "num-intervals");
     numIntervals.setSliderStyle(juce::Slider::RotaryVerticalDrag);
@@ -134,7 +133,7 @@ void PluginEditor::setupChannels()
 void PluginEditor::setupRightSideGlobals()
 {
     falloff.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
-    falloff.setTitleText("Auto-Falloff");
+    falloff.setTitleText("Falloff");
     falloff.attachToParameter(&processorRef.tree, "falloff");
     addParameterControl(&falloff);
     wetDry.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
@@ -201,7 +200,7 @@ void PluginEditor::layoutLeftSideGlobals()
     // delay time controls
     int halfHeight = (getHeight() - (paddingY * 2)) / 2;
     int delaySectionH = col1KnobH + togglePadY + toggleH;
-    int delaySectionY = paddingY + 2 * ((halfHeight - delaySectionH) / 3);
+    int delaySectionY = paddingY + ((halfHeight - delaySectionH) / 2);
     int x = (col1Width - col1KnobW) / 2;
     delayTime.setBounds(x, delaySectionY, col1KnobW, col1KnobH);
     int noTempoX = (col1Width - (toggleW * 2) - togglePadX) / 2;
@@ -211,11 +210,11 @@ void PluginEditor::layoutLeftSideGlobals()
     tempoSync.setBounds(tempoX, delayToggleY, toggleW, toggleH);
     // number of intervals controls
     int intervalsH = col1KnobH + togglePadY + toggleH;
-    int intervalsY = paddingY + halfHeight + ((halfHeight - intervalsH) / 3);
+    int intervalsY = paddingY + halfHeight + ((halfHeight - intervalsH) / 2);
     numIntervals.setBounds(x, intervalsY, col1KnobW, col1KnobH);
-    int loopX = (col1Width - toggleW) / 2;
+    int loopX = (col1Width - toggleWideW) / 2;
     int loopY = intervalsY + col1KnobH + togglePadY;
-    loopButton.setBounds(loopX, loopY, toggleW, toggleH);
+    loopButton.setBounds(loopX, loopY, toggleWideW, toggleH);
 }
 
 void PluginEditor::layoutChannelFilters()
@@ -225,9 +224,8 @@ void PluginEditor::layoutChannelFilters()
     int filterAreaW = (col2Width - (2 * col2Margin));
     int filterW = filterKnobW * 3 + filterMixMargin;
     int x1 = xStart + (filterAreaW - filterW) / 2;
-    int y1 = (((getHeight() / 2) - delayAmpsAreaHeight) - filterKnobH) / 2 + 9;
-    int y2 = (getHeight() / 2) + delayAmpsAreaHeight;
-    y2 = y2 + 9 + (getHeight() - y2 - filterKnobH) / 2;
+    int y1 = 6;
+    int y2 = getHeight() - filterKnobH - 6;
     // lay out filters
     leftFilterLow.setBounds(x1, y1, filterKnobW, filterKnobH);
     rightFilterLow.setBounds(x1, y2, filterKnobW, filterKnobH);
@@ -298,11 +296,11 @@ void PluginEditor::drawLeftSideGlobals(juce::Graphics& g)
     int w = (toggleW * 2) + togglePadX;
     int h = col1KnobH + togglePadY + toggleH;
     int halfHeight = (getHeight() - (paddingY * 2)) / 2;
-    int y = paddingY + 2 * ((halfHeight - h) / 3);
-    g.fillRoundedRectangle(x - 6, y - 6, w + 12, h + 12, 12);
+    int y = paddingY + ((halfHeight - h) / 2);
+    g.fillRoundedRectangle(x - 10, y - 6, w + 20, h + 14, 14);
     // draw background for number of intervals controls area
-    int y2 = paddingY + halfHeight + ((halfHeight - h) / 3);
-    g.fillRoundedRectangle(x - 6, y2 - 6, w + 12, h + 12, 12);
+    int y2 = paddingY + halfHeight + ((halfHeight - h) / 2);
+    g.fillRoundedRectangle(x - 10, y2 - 6, w + 20, h + 14, 14);
 }
 
 void PluginEditor::drawChannels(juce::Graphics& g)
@@ -346,23 +344,27 @@ void PluginEditor::drawChannels(juce::Graphics& g)
     setRadialGradient(g, trans, x + w - r, y + r, black, r, r - s);
     g.fillPath(corners);
     // draw backgrounds for filters
+
+    // int y1 = 6;
+    // int y2 = getHeight() - filterKnobH - 6;
+
     int xStart = col1Width + col2Margin;
     int filterAreaW = (col2Width - (2 * col2Margin));
     int fw = filterKnobW * 3 + filterMixMargin;
     int x1 = xStart + (filterAreaW - fw) / 2;
-    int y1 = (((getHeight() / 2) - delayAmpsAreaHeight) - filterKnobH) / 2 - 9;
-    int y2 = (getHeight() / 2) + delayAmpsAreaHeight;
-    y2 = y2 - 9 + (getHeight() - y2 - filterKnobH) / 2;
-    int fh = filterKnobH + 18;
+    int yExtra = 20;
+    int y1 = 6;
+    int y2 = getHeight() - filterKnobH - 6;
+    int fh = filterKnobH + yExtra;
     g.setColour(findColour(CtmColourIds::darkBgColourId));
-    g.fillRoundedRectangle(x1 - 6, y1 - 6, fw + 12, fh + 12, 12);
-    g.fillRoundedRectangle(x1 - 6, y2 - 6, fw + 12, fh + 12, 12);
+    g.fillRoundedRectangle(x1 - 6, y1 - yExtra, fw + 12, fh + 6, 12);
+    g.fillRoundedRectangle(x1 - 6, y2 - 6, fw + 12, fh + 6, 12);
     // draw filter text
-    g.setColour(juce::Colours::white);
-    g.setFont(14);
-    auto centered = juce::Justification::centred;
-    g.drawText("Delay Filter", x1 - 6, y1, fw + 12, 14, centered);
-    g.drawText("Delay Filter", x1 - 6, y2, fw + 12, 14, centered);
+    // g.setColour(juce::Colours::white);
+    // g.setFont(14);
+    // auto centered = juce::Justification::centred;
+    // g.drawText("Delay Filter", x1 - 6, y1, fw + 12, 14, centered);
+    // g.drawText("Delay Filter", x1 - 6, y2, fw + 12, 14, centered);
 }
 
 void PluginEditor::drawChannelLabels(juce::Graphics& g)

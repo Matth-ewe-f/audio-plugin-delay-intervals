@@ -56,6 +56,7 @@ private:
     static const int col1KnobH;
     static const int toggleW;
     static const int toggleH;
+    static const int toggleWideW;
     static const int togglePadX;
     static const int togglePadY;
     static const int col2Width;
