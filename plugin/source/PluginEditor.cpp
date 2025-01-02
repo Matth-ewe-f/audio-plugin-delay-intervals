@@ -24,14 +24,15 @@ const int PluginEditor::col2ButtonW = 50;
 const int PluginEditor::col2ButtonH = 24;
 const int PluginEditor::col2ButtonPad = 6;
 const int PluginEditor::col2ButtonMargin = 8;
-const int PluginEditor::col3Width = 96;
+const int PluginEditor::col3Width = 120;
 const int PluginEditor::col3KnobW = 72;
 const int PluginEditor::col3KnobH = 80;
-const int PluginEditor::col3KnobMargin = 16;
-const int PluginEditor::col3ToggleW = 56;
-const int PluginEditor::col3ToggleH = 36;
-const int PluginEditor::col3ToggleMargin = 8;
-const int PluginEditor::height = 304;
+const int PluginEditor::col3KnobMargin = 24;
+const int PluginEditor::col3ToggleW = 52;
+const int PluginEditor::col3ToggleH = 22;
+const int PluginEditor::col3ToggleMargin = 4;
+const int PluginEditor::col3ToggleLabelH = 16;
+const int PluginEditor::height = 312;
 const int PluginEditor::paddingY = 8;
 
 // === Lifecycle ==============================================================
@@ -180,10 +181,10 @@ void PluginEditor::setupChannels()
 
 void PluginEditor::setupRightSideGlobals()
 {
-    linkAmps.toggle.setText("LINK DELAYS");
+    linkAmps.toggle.setText("DELAYS");
     linkAmps.toggle.setFixedFontSize(13);
     addAndMakeVisible(linkAmps.toggle);
-    linkFilters.toggle.setText("LINK FILTERS");
+    linkFilters.toggle.setText("FILTERS");
     linkFilters.toggle.setFixedFontSize(13);
     addAndMakeVisible(linkFilters.toggle);
     falloff.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
@@ -348,9 +349,9 @@ void PluginEditor::layoutRightSideGlobals()
 {
     int toggleX = col1Width + col2Width + (col3Width - col3ToggleW) / 2;
     int knobX = col1Width + col2Width + (col3Width - col3KnobW) / 2;
-    int totalH = 2 * col3ToggleH + col3ToggleMargin
+    int totalH = col3ToggleLabelH + 2 * (col3ToggleH + col3ToggleMargin)
         + 2 * (col3KnobH + col3KnobMargin);
-    int y1 = (getHeight() - totalH) / 2;
+    int y1 = (getHeight() - totalH) / 2 + col3ToggleLabelH + col3ToggleMargin;
     linkFilters.setBounds(toggleX, y1, col3ToggleW, col3ToggleH);
     int y2 = y1 + col3ToggleH + col3ToggleMargin;
     linkAmps.setBounds(toggleX, y2, col3ToggleW, col3ToggleH);
@@ -390,6 +391,7 @@ void PluginEditor::drawChannels(juce::Graphics& g)
     int by2 = (getHeight() / 2) + delayAmpsAreaHeight + col2ButtonMargin;
     int bw = col2ButtonW;
     int bh = 2 * col2ButtonH + col2ButtonPad + yExtra;
+    g.setColour(findColour(CtmColourIds::darkBgColourId));
     g.fillRoundedRectangle(bx - 15, by1 - 9, bw + 30, bh + 18, 12);
     g.fillRoundedRectangle(bx - 15, by2 - yExtra, bw + 30, bh + 9, 12);
     // draw backgrounds for filters
@@ -397,7 +399,6 @@ void PluginEditor::drawChannels(juce::Graphics& g)
     int fy1 = filterY;
     int fy2 = getHeight() - filterKnobH - filterY;
     int fh = filterKnobH + yExtra;
-    g.setColour(findColour(CtmColourIds::darkBgColourId));
     g.fillRoundedRectangle(fx - 6, fy1 - yExtra, fw + 12, fh + 6, 12);
     g.fillRoundedRectangle(fx - 6, fy2 - 6, fw + 12, fh + 6, 12);
     // draw background for delay amplitude sliders
@@ -516,7 +517,25 @@ void PluginEditor::drawDelayAmpBeatMarkers(juce::Graphics& g)
 
 void PluginEditor::drawRightSideGlobals(juce::Graphics& g)
 {
-    juce::ignoreUnused(g);
+    // draw backgrounds for controls
+    int x = col1Width + col2Width + (col3Width - col3KnobW) / 2;
+    int totalH = col3ToggleLabelH + 2 * (col3ToggleH + col3ToggleMargin)
+        + 2 * (col3KnobH + col3KnobMargin);
+    int y1 = (getHeight() - totalH) / 2;
+    g.setColour(findColour(CtmColourIds::darkBgColourId));
+    int toggleAreaH = col3ToggleLabelH + 2 * (col3ToggleH + col3ToggleMargin);
+    int r = 12;
+    g.fillRoundedRectangle(x - 6, y1 - 6, col3KnobW + 12, toggleAreaH + 12, r);
+    int y2 = y1 + toggleAreaH + col3KnobMargin;
+    g.fillRoundedRectangle(x - 6, y2 - 6, col3KnobW + 12, col3KnobH + 12, r);
+    int y3 = y2 + col3KnobH + col3KnobMargin;
+    g.fillRoundedRectangle(x - 6, y3 - 6, col3KnobW + 12, col3KnobH + 12, r);
+    // draw text label for the link buttons
+    auto center = juce::Justification::centred;
+    g.setColour(juce::Colours::white);
+    g.setFont(14);
+    juce::Rectangle<int> textRext(x, y1, col3KnobW, col3ToggleLabelH);
+    g.drawFittedText("Mirror", textRext, center, 1);
 }
 
 // === Helper Functions =======================================================

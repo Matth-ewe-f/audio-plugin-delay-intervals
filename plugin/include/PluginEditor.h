@@ -88,6 +88,7 @@ private:
     static const int col3ToggleW;
     static const int col3ToggleH;
     static const int col3ToggleMargin;
+    static const int col3ToggleLabelH;
     static const int height;
     static const int paddingY;
 
