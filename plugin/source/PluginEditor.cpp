@@ -183,9 +183,11 @@ void PluginEditor::setupRightSideGlobals()
 {
     linkAmps.toggle.setText("DELAYS");
     linkAmps.toggle.setFixedFontSize(13);
+    linkAmps.attachToParameter(&processorRef.tree, "delays-linked");
     addAndMakeVisible(linkAmps.toggle);
     linkFilters.toggle.setText("FILTERS");
     linkFilters.toggle.setFixedFontSize(13);
+    linkFilters.attachToParameter(&processorRef.tree, "filters-linked");
     addAndMakeVisible(linkFilters.toggle);
     falloff.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
     falloff.setTitleText("Falloff");

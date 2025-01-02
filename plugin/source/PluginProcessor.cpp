@@ -82,6 +82,12 @@ PluginProcessor::createParameters()
 	parameters.add(ParameterFactory::createBoolParameter(
 		"loop", "Loop", "ON", "OFF", 0
 	));
+	parameters.add(ParameterFactory::createBoolParameter(
+		"delays-linked", "Delays Mirrored", "ON", "OFF", 0
+	));
+	parameters.add(ParameterFactory::createBoolParameter(
+		"filters-linked", "Filters Mirrored", "ON", "OFF", 0
+	));
 	parameters.add(ParameterFactory::createPercentageParameter(
 		"dry-wet", "Dry/Wet", 50
 	));
