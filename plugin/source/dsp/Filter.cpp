@@ -27,6 +27,12 @@ void Filter::attachToParameters
 (juce::AudioProcessorValueTreeState* state, const std::string& highPassParamId,
 const std::string& lowPassParamId, const std::string& mixParamId)
 {
+    if (highPassParam.compare("") != 0)
+        tree->removeParameterListener(highPassParam, this);
+    if (lowPassParam.compare("") != 0)
+        tree->removeParameterListener(highPassParam, this);
+    if (mixParam.compare("") != 0)
+        tree->removeParameterListener(highPassParam, this);
     state->addParameterListener(highPassParamId, this);
     state->addParameterListener(lowPassParamId, this);
     state->addParameterListener(mixParamId, this);

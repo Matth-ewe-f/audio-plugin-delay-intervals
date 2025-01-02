@@ -68,6 +68,8 @@ public:
     void resetRightAmps();
     void copyLeftAmpsToRight();
     void copyRightAmpsToLeft();
+    void linkFilters();
+    void unlinkFilters();
     void notifyHostOfStateChange();
 
     // === State ==============================================================
@@ -84,6 +86,10 @@ public:
         { return "right-delay-" + std::to_string(index); }
 
 private:
+    // === Constants ==========================================================
+    static const float maxDelayTime;
+    static constexpr int maxIntervals = 16;
+    // === Mutable Variables ==================================================
     double lastSampleRate;
     size_t lastDelay;
     size_t lastIntervals;
@@ -91,20 +97,16 @@ private:
     float lastFalloff;
     bool lastLoop;
     bool lastBlockFadeOut;
-    DelayAmp leftAmps[16];
+    DelayAmp leftAmps[maxIntervals];
     CircularBuffer leftBuffer;
-    Filter leftFilters[16];
-    DelayAmp rightAmps[16];
+    Filter leftFilters[maxIntervals];
+    DelayAmp rightAmps[maxIntervals];
     CircularBuffer rightBuffer;
-    Filter rightFilters[16];
+    Filter rightFilters[maxIntervals];
     std::vector<float> tempBuffer; // for operating on signal in processBlock
 #if PERFETTO
     std::unique_ptr<perfetto::TracingSession> tracingSession;
 #endif
-
-    // === Constants ==========================================================
-    static const float maxDelayTime;
-    static const int maxIntervals;
 
     // === Private Helper =====================================================
     size_t getDelaySamples();

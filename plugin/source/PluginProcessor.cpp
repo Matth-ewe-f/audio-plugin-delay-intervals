@@ -6,7 +6,6 @@
 
 // === Constants ==============================================================
 const float PluginProcessor::maxDelayTime = 250;
-const int PluginProcessor::maxIntervals = 16;
 
 // === Lifecycle ==============================================================
 PluginProcessor::PluginProcessor()
@@ -390,6 +389,28 @@ void PluginProcessor::copyRightAmpsToLeft()
 		left->beginChangeGesture();
 		left->setValueNotifyingHost(right->getValue());
 		left->endChangeGesture();
+	}
+}
+
+void PluginProcessor::linkFilters()
+{
+	std::string high = "left-high-pass";
+	std::string low = "left-low-pass";
+	std::string mix = "left-filter-mix";
+	for (size_t i = 0;i < maxIntervals;i++)
+	{
+		rightFilters[i].attachToParameters(&tree, high, low, mix);
+	}
+}
+
+void PluginProcessor::unlinkFilters()
+{
+	std::string high = "right-high-pass";
+	std::string low = "right-low-pass";
+	std::string mix = "right-filter-mix";
+	for (size_t i = 0;i < maxIntervals;i++)
+	{
+		rightFilters[i].attachToParameters(&tree, high, low, mix);
 	}
 }
 

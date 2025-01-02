@@ -187,6 +187,24 @@ void PluginEditor::setupRightSideGlobals()
     addAndMakeVisible(linkAmps.toggle);
     linkFilters.toggle.setText("FILTERS");
     linkFilters.toggle.setFixedFontSize(13);
+    linkFilters.addOnToggleFunction([&] (bool toggled)
+    {
+        juce::AudioProcessorValueTreeState* tree = &processorRef.tree;
+        if (toggled)
+        {
+            rightFilterLow.attachToParameter(tree, "left-high-pass");
+            rightFilterHigh.attachToParameter(tree, "left-low-pass");
+            rightFilterMix.attachToParameter(tree, "left-filter-mix");
+            processorRef.linkFilters();
+        }
+        else
+        {
+            rightFilterLow.attachToParameter(tree, "right-high-pass");
+            rightFilterHigh.attachToParameter(tree, "right-low-pass");
+            rightFilterMix.attachToParameter(tree, "right-filter-mix");
+            processorRef.unlinkFilters();
+        }
+    });
     linkFilters.attachToParameter(&processorRef.tree, "filters-linked");
     addAndMakeVisible(linkFilters.toggle);
     falloff.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
