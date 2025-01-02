@@ -75,8 +75,8 @@ PluginProcessor::createParameters()
 	parameters.add(ParameterFactory::createBoolParameter(
 		"tempo-sync", "Tempo Sync", "ON", "OFF", 0
 	));
-	parameters.add(ParameterFactory::createIntChoiceParameter(
-		"num-intervals", "Intervals", juce::Array<int>(8, maxIntervals), 1
+	parameters.add(ParameterFactory::createIntParameter(
+		"num-intervals", "Intervals", 8, 16, 8
 	));
 	parameters.add(ParameterFactory::createBoolParameter(
 		"loop", "Loop", "ON", "OFF", 0
@@ -473,13 +473,5 @@ size_t PluginProcessor::getDelaySamples()
 
 size_t PluginProcessor::getCurrentNumIntervals()
 {
-	int value = (int) *tree.getRawParameterValue("num-intervals");
-	if (value == 0)
-		return 8UL;
-	else if (value == 1)
-		return 16UL;
-	else if (value == 2)
-		return 32UL;
-	else
-		return 0UL;
+	return (size_t) *tree.getRawParameterValue("num-intervals");
 }

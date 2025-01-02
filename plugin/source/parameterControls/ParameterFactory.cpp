@@ -27,6 +27,15 @@ float defaultVal)
     );
 }
 
+std::unique_ptr<juce::AudioParameterFloat> createIntParameter
+(std::string id, std::string name, int min, int max, int defaultVal)
+{
+    juce::NormalisableRange<float> range(min, max, 1);
+    return std::make_unique<juce::AudioParameterFloat>(
+        id, name, range, defaultVal
+    );
+}
+
 std::unique_ptr<juce::AudioParameterFloat> createPercentageParameter
 (std::string id, std::string name, float defaultVal)
 {

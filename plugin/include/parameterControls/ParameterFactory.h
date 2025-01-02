@@ -8,6 +8,9 @@ std::unique_ptr<juce::AudioParameterChoice> createBoolParameter
 (std::string id, std::string name, std::string onText, std::string offText,
 float defaultVal);
 
+std::unique_ptr<juce::AudioParameterFloat> createIntParameter
+(std::string id, std::string name, int min, int max, int defaultVal);
+
 std::unique_ptr<juce::AudioParameterFloat> createPercentageParameter
 (std::string id, std::string name, float defaultVal);
 

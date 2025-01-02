@@ -343,6 +343,7 @@ void PluginEditor::layoutChannelFilters()
 
 void PluginEditor::layoutDelayAmps()
 {
+    numDelayAmps = 16;
     // calculate the dimensions and shared positions
     int pad = 32 / numDelayAmps;
     int leftY = (getHeight() / 2) - delayAmpsAreaHeight + delayAmpsMarginY;
