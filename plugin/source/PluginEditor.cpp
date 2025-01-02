@@ -183,6 +183,22 @@ void PluginEditor::setupRightSideGlobals()
 {
     linkAmps.toggle.setText("DELAYS");
     linkAmps.toggle.setFixedFontSize(13);
+    linkAmps.addOnToggleFunction([&] (bool toggled)
+    {
+        for (int i = 0;i < rightDelayAmpsLength;i++)
+        {
+            std::string id;
+            if (toggled)
+                id = processorRef.getIdForLeftIntervalAmp(i);
+            else
+                id = processorRef.getIdForRightIntervalAmp(i);
+            rightDelayAmps[i].attachToParameter(&processorRef.tree, id);
+        }
+        if (toggled)
+            processorRef.linkDelays();
+        else
+            processorRef.unlinkDelays();
+    });
     linkAmps.attachToParameter(&processorRef.tree, "delays-linked");
     addAndMakeVisible(linkAmps.toggle);
     linkFilters.toggle.setText("FILTERS");

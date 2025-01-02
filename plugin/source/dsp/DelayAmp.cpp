@@ -8,6 +8,8 @@ DelayAmp::~DelayAmp()
 void DelayAmp::listenTo
 (juce::AudioProcessorValueTreeState* stateTree, std::string param)
 {
+    if (parameterId.compare("") != 0)
+        tree->removeParameterListener(parameterId, this);
     stateTree->addParameterListener(param, this);
     float value = *stateTree->getRawParameterValue(param);
     currentValue = value;

@@ -414,6 +414,22 @@ void PluginProcessor::unlinkFilters()
 	}
 }
 
+void PluginProcessor::linkDelays()
+{
+	for (int i = 0;i < maxIntervals;i++)
+	{
+		rightAmps[i].listenTo(&tree, getIdForLeftIntervalAmp(i));
+	}
+}
+
+void PluginProcessor::unlinkDelays()
+{
+	for (int i = 0;i < maxIntervals;i++)
+	{
+		rightAmps[i].listenTo(&tree, getIdForRightIntervalAmp(i));
+	}
+}
+
 void PluginProcessor::notifyHostOfStateChange()
 {
 	updateHostDisplay(ChangeDetails().withParameterInfoChanged(true));

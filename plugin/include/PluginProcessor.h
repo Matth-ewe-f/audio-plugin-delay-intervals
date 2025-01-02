@@ -70,6 +70,8 @@ public:
     void copyRightAmpsToLeft();
     void linkFilters();
     void unlinkFilters();
+    void linkDelays();
+    void unlinkDelays();
     void notifyHostOfStateChange();
 
     // === State ==============================================================
