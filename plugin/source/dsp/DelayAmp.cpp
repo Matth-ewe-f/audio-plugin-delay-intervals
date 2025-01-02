@@ -13,7 +13,8 @@ void DelayAmp::listenTo
     stateTree->addParameterListener(param, this);
     float value = *stateTree->getRawParameterValue(param);
     currentValue = value;
-    lastValue = value;
+    if (parameterId.compare("") == 0)
+        lastValue = value;
     tree = stateTree;
     parameterId = param;
 }
