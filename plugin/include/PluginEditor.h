@@ -25,6 +25,10 @@ public:
     void handleAsyncUpdate() override;
 
 private:
+    // === Static Constants ===================================================
+    static constexpr int leftDelayAmpsLength = 16;
+    static constexpr int rightDelayAmpsLength = 16;
+    // === Variables ==========================================================
     PluginProcessor& processorRef;
     CtmLookAndFeel lookAndFeel;
     // === Global Controls (Left Side) ========================================
@@ -40,10 +44,8 @@ private:
     ParameterControl rightFilterLow;
     ParameterControl rightFilterHigh;
     ParameterControl rightFilterMix;
-    ParameterControl leftDelayAmps[16];
-    int leftDelayAmpsLength = 16;
-    ParameterControl rightDelayAmps[16];
-    int rightDelayAmpsLength = 16;
+    ParameterControl leftDelayAmps[leftDelayAmpsLength];
+    ParameterControl rightDelayAmps[rightDelayAmpsLength];
     CtmToggle resetLeft;
     CtmToggle resetRight;
     CtmToggle matchLeft;
