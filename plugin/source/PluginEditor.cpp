@@ -92,8 +92,7 @@ void PluginEditor::setupChannels()
 {
     juce::AudioProcessorValueTreeState* tree = &processorRef.tree;
     // get processor parameters that influence layout
-    int n = (int)*tree->getRawParameterValue("num-intervals");
-    numDelayAmps = n == 0 ? 8 : (n == 1 ? 16 : 32);
+    numDelayAmps = (int) *tree->getRawParameterValue("num-intervals");
     wetRatio = *tree->getRawParameterValue("dry-wet") / 100;
     float f = *tree->getRawParameterValue("falloff");
     autoFalloffRate = 1 - (f / 100);
@@ -269,12 +268,11 @@ void PluginEditor::resized()
 // === Listener ===============================================================
 void PluginEditor::parameterChanged(const juce::String& param, float value)
 {
-    int v = (int) value;
     if (param.compare("num-intervals") == 0)
-        numDelayAmps = v == 0 ? 8 : (v == 1 ? 16 : 32);
-    if (param.compare("dry-wet") == 0)
+        numDelayAmps = (int) value;
+    else if (param.compare("dry-wet") == 0)
         wetRatio = value / 100;
-    if (param.compare("falloff") == 0)
+    else if (param.compare("falloff") == 0)
         autoFalloffRate = 1 - (value / 100);
     triggerAsyncUpdate();
 }
@@ -343,37 +341,29 @@ void PluginEditor::layoutChannelFilters()
 
 void PluginEditor::layoutDelayAmps()
 {
-    numDelayAmps = 16;
     // calculate the dimensions and shared positions
-    int pad = 32 / numDelayAmps;
+    int w = 20;
+    int pad = 2;
+    int fullW = w * numDelayAmps + pad * (numDelayAmps - 1);
+    int usableW = col2Width - (col2Margin + delayAmpsMarginX) * 2;
+    int x = col1Width + col2Margin + delayAmpsMarginX + (usableW - fullW) / 2;
     int leftY = (getHeight() / 2) - delayAmpsAreaHeight + delayAmpsMarginY;
     int rightY = (getHeight() / 2) + 3;
-    int ampsUsableW = col2Width - (2 * col2Margin) - delayAmpsMarginX;
-    int w = (ampsUsableW / numDelayAmps) - pad;
     int fullH = delayAmpsAreaHeight - delayAmpsMarginY - 3;
-    // create parameters for amplitude to slider height map function
-    // parameters are for y = a * sqrt(x + 0.02) - b, w points (0, c), (1, 1)
-    // I think the above function looks nice!
-    float c = numDelayAmps == 8 ? 0.1f : (numDelayAmps == 16 ? 0.075f : 0.06f);
-    float a = (1 - c) / 0.87f;
-    float b = 0.162f - 1.17f * c;
-    // layout as many sliders as are necessary
+    // layout the sliders
     for (int i = 0;i < numDelayAmps;i++)
     {
-        int startX = col1Width + col2Margin + delayAmpsMarginX;
-        if (numDelayAmps == 8)
-            startX -= 2;
-        int offsetX = (w + pad) * i;
-        int x = startX + offsetX;
         // scale heights by the dry-wet ratio and auto-falloff
         float p = juce::jmin((i == 0 ? 1 - wetRatio : wetRatio) * 2, 1.0f);
         p *= pow(autoFalloffRate, (float) i);
         // denormalize the amplitude-to-height mapping a bit for visual appeal
-        // uses function described in comment where a and b are defined
-        int h = (int) std::round(fullH * (a * pow(p + 0.02f, 0.5f) - b));
+        float factor = 1.057f * pow(p + 0.02f, 0.5f) - 0.0684f;
+        int h = (int) std::round(fullH * factor);
         // set the heights
         leftDelayAmps[i].setBounds(x, leftY + (fullH - h), w, h);
         rightDelayAmps[i].setBounds(x, rightY + (fullH - h), w, h);
+        // prepare for next iteration
+        x += w + pad;
     }
     // hide any other sliders
     for (int i = numDelayAmps;i < leftDelayAmpsLength;i++)
@@ -517,38 +507,28 @@ void PluginEditor::drawChannelLabels(juce::Graphics& g)
 
 void PluginEditor::drawDelayAmpBeatMarkers(juce::Graphics& g)
 {
-    // get dimension info
-    int numDividers = (numDelayAmps / 4) - 1;
-    int ampsUsableW = col2Width - (2 * col2Margin) - delayAmpsMarginX;
-    int dividerW = ampsUsableW / numDelayAmps;
-    int xStart = col1Width + col2Margin + delayAmpsMarginX;
-    int cy = getHeight() / 2;
+    // calculate shared dimensions and positions
+    int w = 20;
+    int pad = 2;
+    int fullW = w * numDelayAmps + pad * (numDelayAmps - 1);
+    int usableW = col2Width - (col2Margin + delayAmpsMarginX) * 2;
+    int x = col1Width + col2Margin + delayAmpsMarginX + (usableW - fullW) / 2;
+    int lineH = 28;
+    int y1 = (getHeight() / 2) - (lineH / 2);
+    int y2 = (getHeight() / 2) + (lineH / 2);
+    // set the color for the graphics object
     juce::Colour opaque = findColour(CtmColourIds::brightOutlineColourId);
-    opaque = opaque.withAlpha(0.7f);
     juce::Colour trans = opaque.withAlpha(0.0f);
-    // draw each divider
-    for (int i = 0;i < numDividers;i++)
+    auto gradient = juce::ColourGradient::vertical(trans, y1, trans, y2);
+    double p = 2.0 / lineH;
+    gradient.addColour(p, opaque);
+    gradient.addColour(1 - p, opaque);
+    g.setGradientFill(gradient);
+    // draw the lines
+    for (int i = 4;i < numDelayAmps;i += 4)
     {
-        int x = xStart + (dividerW * (i + 1) * 4) - 1;
-        if (numDelayAmps == 8)
-            x -= 3;
-        int lineH;
-        if (numDividers == 1)
-            lineH = 24;
-        else if (numDividers == 3)
-            lineH = i == 1 ? 24 : 18;
-        else if (numDividers == 7)
-            lineH = i == 3 ? 24 : (i % 2 == 1) ? 18 : 8;
-        else
-            lineH = 0;
-        int y1 = cy - lineH;
-        int y2 = cy + lineH;
-        auto grad = juce::ColourGradient::vertical(trans, y1, trans, y2);
-        double p = 2.0 / lineH; // numerator * 2 is length of color fade
-        grad.addColour(p, opaque);
-        grad.addColour(1 - p, opaque);
-        g.setGradientFill(grad);
-        g.drawLine(x, y1, x, y2);
+        x += (w + pad) * 4;
+        g.drawLine(x - 1, y1, x - 1, y2, 1);
     }
 }
 
