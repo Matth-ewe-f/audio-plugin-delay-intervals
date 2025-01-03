@@ -4,6 +4,7 @@
 #include "CtmToggle.h"
 #include "ParameterControl.h"
 #include "ParameterToggle.h"
+#include "ComboBoxControl.h"
 
 class PluginEditor final :
     public juce::AudioProcessorEditor,
@@ -33,6 +34,7 @@ private:
     CtmLookAndFeel lookAndFeel;
     // === Global Controls (Left Side) ========================================
     ParameterControl delayTime;
+    ComboBoxControl delayTimeSync;
     ParameterToggle noTempoSync;
     ParameterToggle tempoSync;
     ParameterControl numIntervals;
@@ -55,7 +57,8 @@ private:
     ParameterToggle linkFilters;
     ParameterControl falloff;
     ParameterControl wetDry;
-    // === Info for Drawing Channel Controls ==================================
+    // === Info for Drawing Controls ==========================================
+    bool isTempoSynched;
     int numDelayAmps;
     float wetRatio;
     float autoFalloffRate;
@@ -114,6 +117,7 @@ private:
 
     // === Helper Functions ===================================================
     void addParameterControl(ParameterControl*);
+    void addComboBoxControl(ComboBoxControl*);
     void setHorizontalGradient
     (juce::Graphics&, juce::Colour c1, int x1, juce::Colour c2, int x2);
     void setVerticalGradient

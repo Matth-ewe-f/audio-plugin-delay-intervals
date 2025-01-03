@@ -25,6 +25,7 @@ target_sources(
         source/ui/CtmToggle.cpp
         source/parameterControls/ParameterControl.cpp
         source/parameterControls/ParameterToggle.cpp
+        source/parameterControls/ComboBoxControl.cpp
         source/parameterControls/ParameterFactory.cpp
         source/PluginProcessor.cpp
         source/PluginEditor.cpp
