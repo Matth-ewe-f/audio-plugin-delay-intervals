@@ -5,7 +5,7 @@
 const int PluginEditor::col1Width = 120;
 const int PluginEditor::col1KnobW = 72;
 const int PluginEditor::col1KnobH = 80;
-const int PluginEditor::syncToggleW = 32;
+const int PluginEditor::syncToggleW = 36;
 const int PluginEditor::syncToggleH = 22;
 const int PluginEditor::syncTogglePadX = 2;
 const int PluginEditor::syncTogglePadY = 8;
@@ -41,6 +41,7 @@ PluginEditor::PluginEditor (PluginProcessor &p)
 {
     setWantsKeyboardFocus(true);
     setLookAndFeel(&lookAndFeel);
+    tempoSyncOn = *processorRef.tree.getRawParameterValue("tempo-sync") >= 1;
     processorRef.tree.addParameterListener("tempo-sync", this);
     processorRef.tree.addParameterListener("num-intervals", this);
     processorRef.tree.addParameterListener("dry-wet", this);
@@ -72,10 +73,10 @@ void PluginEditor::setupLeftSideGlobals()
     delayTimeSync.setTitleText("Delay Time");
     delayTimeSync.attachToParameter(&processorRef.tree, "delay-time-sync");
     addComboBoxControl(&delayTimeSync);
-    noTempoSync.toggle.setText("MS");
+    noTempoSync.toggle.setText("SEC");
     noTempoSync.toggle.setRadioGroupId(1, juce::dontSendNotification);
     addAndMakeVisible(noTempoSync.toggle);
-    tempoSync.toggle.setText("TP");
+    tempoSync.toggle.setText("NOTE");
     tempoSync.toggle.setRadioGroupId(1, juce::dontSendNotification);
     ParameterToggle* noTempoSyncPtr = &noTempoSync;
     tempoSync.addOnToggleFunction([noTempoSyncPtr] (bool b)
@@ -274,7 +275,7 @@ void PluginEditor::resized()
 void PluginEditor::parameterChanged(const juce::String& param, float value)
 {
     if (param.compare("tempo-sync") == 0)
-        isTempoSynched = value >= 1;
+        tempoSyncOn = value >= 1;
     if (param.compare("num-intervals") == 0)
         numDelayAmps = (int) value;
     else if (param.compare("dry-wet") == 0)
@@ -299,14 +300,14 @@ void PluginEditor::layoutLeftSideGlobals()
     int delaySectionH = col1KnobH + syncTogglePadY + syncToggleH;
     int delaySectionY = paddingY + ((halfHeight - delaySectionH) / 2);
     int x = (col1Width - col1KnobW) / 2;
-    if (isTempoSynched)
+    if (tempoSyncOn)
     {
         delayTime.setBounds(0, 0, 0, 0);
-        delayTimeSync.setBounds(x, delaySectionY, col1KnobW, col1KnobH);
+        delayTimeSync.setBounds(x - 2, delaySectionY, col1KnobW + 4, col1KnobH);
     }
     else
     {
-        delayTime.setBounds(x, delaySectionY, col1KnobW, col1KnobH);
+        delayTime.setBounds(x - 2, delaySectionY, col1KnobW + 4, col1KnobH);
         delayTimeSync.setBounds(0, 0, 0, 0);
     }
     int noTempoX = (col1Width - (syncToggleW * 2) - syncTogglePadX) / 2;
@@ -415,10 +416,10 @@ void PluginEditor::drawLeftSideGlobals(juce::Graphics& g)
     int h = col1KnobH + syncTogglePadY + syncToggleH;
     int halfHeight = (getHeight() - (paddingY * 2)) / 2;
     int y = paddingY + ((halfHeight - h) / 2);
-    g.fillRoundedRectangle(x - 10, y - 6, w + 20, h + 14, 14);
+    g.fillRoundedRectangle(x - 8, y - 6, w + 16, h + 14, 14);
     // draw background for number of intervals controls area
     int y2 = paddingY + halfHeight + ((halfHeight - h) / 2);
-    g.fillRoundedRectangle(x - 10, y2 - 6, w + 20, h + 14, 14);
+    g.fillRoundedRectangle(x - 8, y2 - 6, w + 16, h + 14, 14);
 }
 
 void PluginEditor::drawChannels(juce::Graphics& g)

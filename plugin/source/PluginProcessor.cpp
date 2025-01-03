@@ -61,13 +61,13 @@ PluginProcessor::createParameters()
 	juce::StringArray options = juce::StringArray(
 		"16th triplet",
 		"16th",
-		"dotted 16th",
+		"16th dotted",
 		"8th triplet",
 		"8th",
-		"dotted 8th",
-		"quarter triplet",
-		"quarter",
-		"dotted quarter"
+		"8th dotted",
+		"4th triplet",
+		"4th",
+		"4th dotted"
 	);
 	parameters.add(ParameterFactory::createChoiceParameter(
 		"delay-time-sync", "Delay Time (Rhythmic)", options, 4

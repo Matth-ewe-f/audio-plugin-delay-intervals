@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "CtmComboBox.h"
 
 using ComboBoxAttachment
     = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
@@ -8,7 +9,7 @@ class ComboBoxControl
 {
 public:
     std::string parameterId;
-    juce::ComboBox comboBox;
+    CtmComboBox comboBox;
     juce::Label title;
     std::unique_ptr<ComboBoxAttachment> attachment;
 

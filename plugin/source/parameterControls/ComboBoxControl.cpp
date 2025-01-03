@@ -41,6 +41,7 @@ void ComboBoxControl::attachToParameter
     comboBox.clear();
     auto* param = treeState->getParameter(paramId);
     comboBox.addItemList(param->getAllValueStrings(), 1);
+    comboBox.setSelectedId((int) *treeState->getRawParameterValue(paramId));
 }
 
 void ComboBoxControl::setTitleText(const std::string& str)

@@ -113,6 +113,26 @@ float max, juce::Slider::SliderStyle style, juce::Slider& slider)
         drawLinearSliderBar(g, x, y, w, h, pos, slider);
 }
 
+void CtmLookAndFeel::drawComboBox
+(juce::Graphics& g, int w, int h, bool clicked, int buttonX, int buttonY,
+int buttonW, int buttonH, juce::ComboBox& comboBox)
+{
+    bool hover = comboBox.isMouseOver(true);
+    if (hover)
+        g.setColour(comboBox.findColour(CtmColourIds::darkBgColourId));
+    else
+        g.setColour(comboBox.findColour(CtmColourIds::normalBgColourId));
+    g.fillRoundedRectangle(1, 1, w - 2, h - 2, 6);
+    g.setColour(comboBox.findColour(CtmColourIds::brightOutlineColourId));
+    g.drawRoundedRectangle(1, 1, w - 2, h - 2, 6, 1);
+}
+
+void CtmLookAndFeel::positionComboBoxText
+(juce::ComboBox& comboBox, juce::Label& label)
+{
+    label.setBounds(1, 1, comboBox.getWidth() - 2, comboBox.getHeight() - 2);
+}
+
 // === Private Helper =========================================================
 void CtmLookAndFeel::drawLinearSliderNoBar
 (juce::Graphics& g, int x, int y, int w, int h, float p, juce::Slider& slider)

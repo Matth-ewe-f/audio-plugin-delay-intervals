@@ -17,6 +17,10 @@ public:
     void drawLinearSlider
     (juce::Graphics&, int x, int y, int w, int h, float pos, float min,
     float max, juce::Slider::SliderStyle, juce::Slider&) override;
+    void drawComboBox
+    (juce::Graphics&, int w, int h, bool clicked, int buttonX, int buttonY,
+    int buttonW, int buttonH, juce::ComboBox&) override;
+    void positionComboBoxText(juce::ComboBox&, juce::Label&) override;
 
 private:
     // === Internal Layout Constants ==========================================

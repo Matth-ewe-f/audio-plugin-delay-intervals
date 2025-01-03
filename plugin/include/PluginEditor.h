@@ -58,7 +58,7 @@ private:
     ParameterControl falloff;
     ParameterControl wetDry;
     // === Info for Drawing Controls ==========================================
-    bool isTempoSynched;
+    bool tempoSyncOn;
     int numDelayAmps;
     float wetRatio;
     float autoFalloffRate;
