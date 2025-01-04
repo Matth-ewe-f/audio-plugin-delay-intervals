@@ -48,7 +48,7 @@ PluginProcessor::PluginProcessor()
 	lastDelay = getDelaySamples();
 	lastIntervals = getCurrentNumIntervals();
 	lastBlockFadeOut = false;
-	lastDryWet = *tree.getRawParameterValue("dry-wet") / 100;
+	lastWet = *tree.getRawParameterValue("wet") / 100;
 	lastFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
 	lastLoop = *tree.getRawParameterValue("loop") >= 1;
 }
@@ -89,7 +89,7 @@ PluginProcessor::createParameters()
 		"filters-linked", "Filters Mirrored", "ON", "OFF", 0
 	));
 	parameters.add(ParameterFactory::createPercentageParameter(
-		"dry-wet", "Dry/Wet", 50
+		"wet", "Wet Mix", 100
 	));
 	parameters.add(ParameterFactory::createPercentageParameter(
 		"falloff", "Auto-Falloff", 0
@@ -191,7 +191,7 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 	lastDelay = getDelaySamples();
 	lastIntervals = getCurrentNumIntervals();
 	lastBlockFadeOut = false;
-	lastDryWet = *tree.getRawParameterValue("dry-wet") / 100;
+	lastWet = *tree.getRawParameterValue("wet") / 100;
 	lastFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
 	lastLoop = *tree.getRawParameterValue("loop") >= 1;
 	tempBuffer.resize((size_t) samplesPerBlock, 0.0f);
@@ -224,7 +224,7 @@ void PluginProcessor::processBlock
 	bool intervalsChanged = curIntervals != lastIntervals;
 	size_t intervals = intervalsChanged ? lastIntervals : curIntervals;
 	bool fadeOut = delayChanged || intervalsChanged;
-	float curDryWet = *tree.getRawParameterValue("dry-wet") / 100;
+	float curWet = *tree.getRawParameterValue("wet") / 100;
 	float curFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
 	bool loop = *tree.getRawParameterValue("loop") >= 1;
 	// process each channel
@@ -235,12 +235,6 @@ void PluginProcessor::processBlock
 		CircularBuffer* delayBuf = channel == 0 ? &leftBuffer : &rightBuffer;
 		DelayAmp* amps = channel == 0 ? leftAmps : rightAmps;
 		Filter* filters = channel == 0 ? leftFilters : rightFilters;
-		float dryWet = lastDryWet;
-		float dryWetStep;
-		if (juce::approximatelyEqual(lastDryWet, curDryWet))
-			dryWetStep = 0;
-		else
-			dryWetStep = (curDryWet - lastDryWet) / numSamples;
 		// add dry signal to temporary buffer, will add to delay buffer later
 		for (size_t i = 0;i < numSamples;i++)
 			tempBuffer[i] = channelData[i];
@@ -262,8 +256,7 @@ void PluginProcessor::processBlock
 		for (size_t i = 0;i < numSamples;i++)
 		{
 			dryAmp += dryAmpStep;
-			dryWet += dryWetStep;
-			channelData[i] *= (1 - dryWet) * dryAmp;
+			channelData[i] *= dryAmp;
 		}
 		// if enabled, add looped signal to output and temporary buffer for
 		// adding back to the delay buffer
@@ -274,8 +267,8 @@ void PluginProcessor::processBlock
 				loopDelay, numSamples, lastFalloff, curFalloff
 			);
 			delayBuf->applyFilterToSamples(loopDelay, numSamples, &filters[0]);
-			dryAmpStart *= lastDryWet;
-			dryAmpEnd *= curDryWet;
+			dryAmpStart *= lastWet;
+			dryAmpEnd *= curWet;
 			if (!lastLoop)
 				dryAmpStart = 0;
 			else if (!loop || fadeOut)
@@ -321,16 +314,21 @@ void PluginProcessor::processBlock
 				delayBuf->sumWithSamples(d, data, numSamples, gain);
 			}
 		}
-		// scale wet signal by dry/wet, fade out if delay time has started
+		// scale wet signal by wet param, fade out if delay time has started
 		// changing on this block, and add to output signal
-		dryWet = lastDryWet;
+		float wet = lastWet;
+		float wetStep;
+		if (juce::approximatelyEqual(lastWet, curWet))
+			wetStep = 0;
+		else
+			wetStep = (curWet - lastWet) / numSamples;
 		float fade = 1;
 		float fadeStep = 1.0f / numSamples;
 		for (size_t i = 0;i < numSamples;i++)
 		{
 			fade -= fadeStep;
-			dryWet += dryWetStep;
-			tempBuffer[i] *= dryWet * (fadeOut ? fade : 1);
+			wet += wetStep;
+			tempBuffer[i] *= wet * (fadeOut ? fade : 1);
 			channelData[i] += tempBuffer[i];
 		}
 		// clear buffer if the delay time has changed
@@ -341,7 +339,7 @@ void PluginProcessor::processBlock
 	lastDelay = curDelay;
 	lastIntervals = curIntervals;
 	lastBlockFadeOut = fadeOut;
-	lastDryWet = curDryWet;
+	lastWet = curWet;
 	lastFalloff = curFalloff;
 	lastLoop = loop;
 }

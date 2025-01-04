@@ -106,7 +106,7 @@ private:
     double lastBpm;
     size_t lastDelay;
     size_t lastIntervals;
-    float lastDryWet;
+    float lastWet;
     float lastFalloff;
     bool lastLoop;
     bool lastBlockFadeOut;

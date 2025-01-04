@@ -46,7 +46,7 @@ PluginEditor::PluginEditor (PluginProcessor &p)
     processorRef.tree.addParameterListener("tempo-sync", this);
     processorRef.tree.addParameterListener("delay-time-sync", this);
     processorRef.tree.addParameterListener("num-intervals", this);
-    processorRef.tree.addParameterListener("dry-wet", this);
+    processorRef.tree.addParameterListener("wet", this);
     processorRef.tree.addParameterListener("falloff", this);
     // setup components
     setupLeftSideGlobals();
@@ -66,7 +66,7 @@ PluginEditor::~PluginEditor()
     processorRef.tree.removeParameterListener("tempo-sync", this);
     processorRef.tree.removeParameterListener("delay-time-sync", this);
     processorRef.tree.removeParameterListener("num-intervals", this);
-    processorRef.tree.removeParameterListener("dry-wet", this);
+    processorRef.tree.removeParameterListener("wet", this);
     processorRef.tree.removeParameterListener("falloff", this);
     setLookAndFeel(nullptr);
 }
@@ -111,7 +111,7 @@ void PluginEditor::setupChannels()
     juce::AudioProcessorValueTreeState* tree = &processorRef.tree;
     // get processor parameters that influence layout
     numDelayAmps = (int) *tree->getRawParameterValue("num-intervals");
-    wetRatio = *tree->getRawParameterValue("dry-wet") / 100;
+    wetRatio = *tree->getRawParameterValue("wet") / 100;
     float f = *tree->getRawParameterValue("falloff");
     autoFalloffRate = 1 - (f / 100);
     // setup filter controls
@@ -245,8 +245,8 @@ void PluginEditor::setupRightSideGlobals()
     falloff.attachToParameter(&processorRef.tree, "falloff");
     addParameterControl(&falloff);
     wetDry.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
-    wetDry.setTitleText("Mix");
-    wetDry.attachToParameter(&processorRef.tree, "dry-wet");
+    wetDry.setTitleText("Wet");
+    wetDry.attachToParameter(&processorRef.tree, "wet");
     addParameterControl(&wetDry);
 }
 
@@ -292,7 +292,7 @@ void PluginEditor::parameterChanged(const juce::String& param, float value)
         tempoSyncNoteIndex = (int) value;
     else if (param.compare("num-intervals") == 0)
         numDelayAmps = (int) value;
-    else if (param.compare("dry-wet") == 0)
+    else if (param.compare("wet") == 0)
         wetRatio = value / 100;
     else if (param.compare("falloff") == 0)
         autoFalloffRate = 1 - (value / 100);
@@ -394,8 +394,8 @@ void PluginEditor::layoutDelayAmps()
     // layout the sliders
     for (int i = 0;i < numDelayAmps;i++)
     {
-        // scale heights by the dry-wet ratio and auto-falloff
-        float p = juce::jmin((i == 0 ? 1 - wetRatio : wetRatio) * 2, 1.0f);
+        // scale heights by the wet ratio and auto-falloff
+        float p = i == 0 ? 1 : wetRatio;
         p *= pow(autoFalloffRate, (float) i);
         // denormalize the amplitude-to-height mapping a bit for visual appeal
         float factor = 1.057f * pow(p + 0.02f, 0.5f) - 0.0684f;
