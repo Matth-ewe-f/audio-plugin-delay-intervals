@@ -27,12 +27,13 @@ const int PluginEditor::col2ButtonMargin = 8;
 const int PluginEditor::col3Width = 120;
 const int PluginEditor::col3KnobW = 72;
 const int PluginEditor::col3KnobH = 80;
+const int PluginEditor::col3WetDryH = 102;
 const int PluginEditor::col3KnobMargin = 24;
 const int PluginEditor::col3ToggleW = 52;
 const int PluginEditor::col3ToggleH = 24;
 const int PluginEditor::col3ToggleMargin = 4;
 const int PluginEditor::col3ToggleLabelH = 16;
-const int PluginEditor::height = 312;
+const int PluginEditor::height = 316;
 const int PluginEditor::paddingY = 8;
 
 // === Lifecycle ==============================================================
@@ -418,7 +419,7 @@ void PluginEditor::layoutRightSideGlobals()
     int toggleX = col1Width + col2Width + (col3Width - col3ToggleW) / 2;
     int knobX = col1Width + col2Width + (col3Width - col3KnobW) / 2;
     int totalH = col3ToggleLabelH + 2 * (col3ToggleH + col3ToggleMargin)
-        + 2 * (col3KnobH + col3KnobMargin);
+        + col3KnobH + col3WetDryH + 2 * col3KnobMargin;
     int y1 = (getHeight() - totalH) / 2 + col3ToggleLabelH + col3ToggleMargin;
     linkFilters.setBounds(toggleX, y1, col3ToggleW, col3ToggleH);
     int y2 = y1 + col3ToggleH + col3ToggleMargin;
@@ -426,7 +427,8 @@ void PluginEditor::layoutRightSideGlobals()
     int y3 = y2 + col3ToggleH + col3KnobMargin;
     falloff.setBounds(knobX, y3, col3KnobW, col3KnobH);
     int y4 = y3 + col3KnobH + col3KnobMargin;
-    wetDry.setBounds(knobX, y4, col3KnobW, col3KnobH);
+    dryMix.setBounds(knobX, y4, col3KnobW / 2, col3WetDryH);
+    wetMix.setBounds(knobX + col3KnobW / 2, y4, col3KnobW / 2, col3WetDryH);
 }
 
 // == Drawing Functions ======================================================
@@ -578,16 +580,17 @@ void PluginEditor::drawRightSideGlobals(juce::Graphics& g)
     // draw backgrounds for controls
     int x = col1Width + col2Width + (col3Width - col3KnobW) / 2;
     int totalH = col3ToggleLabelH + 2 * (col3ToggleH + col3ToggleMargin)
-        + 2 * (col3KnobH + col3KnobMargin);
+        + col3KnobH + col3WetDryH + 2 * col3KnobMargin;
     int y1 = (getHeight() - totalH) / 2;
     g.setColour(findColour(CtmColourIds::darkBgColourId));
     int toggleAreaH = col3ToggleLabelH + 2 * (col3ToggleH + col3ToggleMargin);
+    int w = col3KnobW;
     int r = 12;
-    g.fillRoundedRectangle(x - 6, y1 - 6, col3KnobW + 12, toggleAreaH + 12, r);
+    g.fillRoundedRectangle(x - 6, y1 - 12, w + 12, toggleAreaH + 18, r);
     int y2 = y1 + toggleAreaH + col3KnobMargin;
-    g.fillRoundedRectangle(x - 6, y2 - 6, col3KnobW + 12, col3KnobH + 12, r);
+    g.fillRoundedRectangle(x - 6, y2 - 6, w + 12, col3KnobH + 12, r);
     int y3 = y2 + col3KnobH + col3KnobMargin;
-    g.fillRoundedRectangle(x - 6, y3 - 6, col3KnobW + 12, col3KnobH + 12, r);
+    g.fillRoundedRectangle(x - 6, y3 - 6, w + 12, col3WetDryH + 18, r);
     // draw text label for the link buttons
     auto center = juce::Justification::centred;
     g.setColour(juce::Colours::white);
