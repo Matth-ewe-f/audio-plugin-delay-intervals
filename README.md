@@ -1,4 +1,8 @@
 # Delay Intervals
+<p float="left">
+  <img src="/screenshots/shot4.png" width="49%" />
+  <img src="/screenshots/shot3.png" width="49%" /> 
+</p>
 An audio plugin that can create fully customizeable delay patterns, with adjustable volume, panning, and interval between repeats. No longer do you have to rely on stereo crossfeed formulae to create the rhythmic delay effect that you want! There are also built-in filters for the delayed sound, and the capability to loop indefinitely. Use this plugin to produce shimmering, bounding atmospheric effects, or phrenetic, energetic rhythimc patterns. See the **[Installation Guide](#installation-guide)** to get started using Delay Intervals!
 
 ## Description
@@ -30,3 +34,8 @@ As of now, the only way to install Delay Intervals is to download the sources fi
     `cmake --build build`
 
 6. Plugin files will be located in subfolders of `build/plugin/Delay-Intervals_artefacts/` based on plugin format (VST, AU, etc). Choose the one you plan to use and install it as you would any other plugin.
+
+<p float="left">
+  <img src="/screenshots/shot1.png" width="49%" />
+  <img src="/screenshots/shot2.png" width="49%" /> 
+</p>
