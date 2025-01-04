@@ -211,10 +211,6 @@ void PluginEditor::setupRightSideGlobals()
                 id = processorRef.getIdForRightIntervalAmp(i);
             rightDelayAmps[i].attachToParameter(&processorRef.tree, id);
         }
-        if (toggled)
-            processorRef.linkDelays();
-        else
-            processorRef.unlinkDelays();
     });
     linkAmps.attachToParameter(&processorRef.tree, "delays-linked");
     addAndMakeVisible(linkAmps.toggle);
@@ -228,14 +224,12 @@ void PluginEditor::setupRightSideGlobals()
             rightFilterLow.attachToParameter(tree, "left-high-pass");
             rightFilterHigh.attachToParameter(tree, "left-low-pass");
             rightFilterMix.attachToParameter(tree, "left-filter-mix");
-            processorRef.linkFilters();
         }
         else
         {
             rightFilterLow.attachToParameter(tree, "right-high-pass");
             rightFilterHigh.attachToParameter(tree, "right-low-pass");
             rightFilterMix.attachToParameter(tree, "right-filter-mix");
-            processorRef.unlinkFilters();
         }
     });
     linkFilters.attachToParameter(&processorRef.tree, "filters-linked");

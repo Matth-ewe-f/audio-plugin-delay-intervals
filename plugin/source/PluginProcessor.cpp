@@ -194,6 +194,8 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 	lastWet = *tree.getRawParameterValue("wet") / 100;
 	lastFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
 	lastLoop = *tree.getRawParameterValue("loop") >= 1;
+	lastAmpsLinked = *tree.getRawParameterValue("delays-linked") >= 1;
+	lastFiltersLinked = *tree.getRawParameterValue("filters-linked") >= 1;
 	tempBuffer.resize((size_t) samplesPerBlock, 0.0f);
 }
 
@@ -213,6 +215,19 @@ void PluginProcessor::processBlock
 	int numOutputChannels = getTotalNumOutputChannels();
 	for (int i = numInputChannels;i < numOutputChannels;i++)
 		buffer.clear(i, 0, buffer.getNumSamples());
+	// handle parameter linking
+	bool ampsLinked = *tree.getRawParameterValue("delays-linked") >= 1;
+	if (ampsLinked && !lastAmpsLinked)
+		linkDelays();
+	else if (!ampsLinked && lastAmpsLinked)
+		unlinkDelays();
+	lastAmpsLinked = ampsLinked;
+	bool filtersLinked = *tree.getRawParameterValue("filters-linked") >= 1;
+	if (filtersLinked && !lastFiltersLinked)
+		linkFilters();
+	else if (!filtersLinked && lastFiltersLinked)
+		unlinkFilters();
+	lastFiltersLinked = filtersLinked;
 	// get parameters by which to process the audio
 	size_t numSamples = (size_t) buffer.getNumSamples();
 	size_t curDelay = getDelaySamples();

@@ -110,6 +110,8 @@ private:
     float lastFalloff;
     bool lastLoop;
     bool lastBlockFadeOut;
+    bool lastAmpsLinked;
+    bool lastFiltersLinked;
     DelayAmp leftAmps[maxIntervals];
     CircularBuffer leftBuffer;
     Filter leftFilters[maxIntervals];
