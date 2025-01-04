@@ -26,7 +26,8 @@ PluginProcessor::PluginProcessor()
 #endif
 	),
 	tree(*this, nullptr, "PARAMETERS", createParameters()),
-	lastSampleRate(44100)
+	lastSampleRate(44100),
+	lastBpm(-1)
 {
 #if PERFETTO
     MelatoninPerfetto::get().beginSession();
@@ -203,9 +204,9 @@ void PluginProcessor::processBlock
 {
 	TRACE_DSP();
 	juce::ignoreUnused(midiMessages); // not a midi plugin
-	// get the audio playhead
+	// get the audio playhead for tempo synched delay
 	juce::AudioPlayHead* playhead = getPlayHead();
-	// if (playhead && playhead->getPosition().hasValue())
+	if (playhead && playhead->getPosition().hasValue())
 		lastBpm = playhead->getPosition()->getBpm().orFallback(120.0);
 	// setup channels
 	int numInputChannels = getTotalNumInputChannels();
@@ -472,7 +473,7 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes)
 
 float PluginProcessor::getSecondsForNoteValue(int index)
 {
-	if (index >= (int) numNoteValues || index < 0)
+	if (index >= (int) numNoteValues || index < 0 || lastBpm < 0)
 		return 0;
 	return (noteValues[index].proportion / (float) lastBpm) * 240;
 }
@@ -483,7 +484,7 @@ size_t PluginProcessor::getDelaySamples()
 	if (*tree.getRawParameterValue("tempo-sync") >= 1)
 	{
 		float noteIndex = *tree.getRawParameterValue("delay-time-sync");
-		float sec = getSecondsForNoteValue(noteIndex);
+		float sec = getSecondsForNoteValue((int) noteIndex);
 		return (size_t) (lastSampleRate * sec);
 	}
 	else

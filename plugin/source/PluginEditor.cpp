@@ -622,7 +622,7 @@ void PluginEditor::setNoteValueDelayLabel(int index)
     {
         s = "";
     }
-    if (milliseconds <= 250)
+    else if (milliseconds <= 250)
     {
         s = std::to_string(milliseconds) + "ms"; 
         c = normalTextColor;
