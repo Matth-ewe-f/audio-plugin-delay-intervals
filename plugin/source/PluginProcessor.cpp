@@ -6,6 +6,14 @@
 
 // === Constants ==============================================================
 const float PluginProcessor::maxDelayTime = 250;
+const NoteValue PluginProcessor::noteValues[numNoteValues] = {
+	{ "16th triplet", 0.0417f },
+	{ "16th", 0.0625f },
+	{ "16th dotted", 0.09375f },
+	{ "8th triplet", 0.0833f },
+	{ "8th", 0.125f },
+	{ "8th dotted", 0.1875f }
+};
 
 // === Lifecycle ==============================================================
 PluginProcessor::PluginProcessor()
@@ -58,17 +66,9 @@ PluginProcessor::createParameters()
 	parameters.add(ParameterFactory::createTimeParameter(
 		"delay-time", "Delay Time", 20, maxDelayTime, 1, 100
 	));
-	juce::StringArray options = juce::StringArray(
-		"16th triplet",
-		"16th",
-		"16th dotted",
-		"8th triplet",
-		"8th",
-		"8th dotted",
-		"4th triplet",
-		"4th",
-		"4th dotted"
-	);
+	juce::StringArray options;
+	for (size_t i = 0;i < numNoteValues;i++)
+		options.add(noteValues[i].name);
 	parameters.add(ParameterFactory::createChoiceParameter(
 		"delay-time-sync", "Delay Time (Rhythmic)", options, 4
 	));
@@ -203,10 +203,14 @@ void PluginProcessor::processBlock
 {
 	TRACE_DSP();
 	juce::ignoreUnused(midiMessages); // not a midi plugin
-	auto numInputChannels = getTotalNumInputChannels();
-	auto numOutputChannels = getTotalNumOutputChannels();
-	// zeroes out any unused outputs (if there are any)
-	for (auto i = numInputChannels;i < numOutputChannels;i++)
+	// get the audio playhead
+	juce::AudioPlayHead* playhead = getPlayHead();
+	// if (playhead && playhead->getPosition().hasValue())
+		lastBpm = playhead->getPosition()->getBpm().orFallback(120.0);
+	// setup channels
+	int numInputChannels = getTotalNumInputChannels();
+	int numOutputChannels = getTotalNumOutputChannels();
+	for (int i = numInputChannels;i < numOutputChannels;i++)
 		buffer.clear(i, 0, buffer.getNumSamples());
 	// get parameters by which to process the audio
 	size_t numSamples = (size_t) buffer.getNumSamples();
@@ -462,6 +466,13 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes)
 		tree.replaceState(juce::ValueTree::fromXml(*xml));
 		notifyHostOfStateChange();
 	}
+}
+
+float PluginProcessor::getSecondsForNoteValue(int index)
+{
+	if (index >= (int) numNoteValues || index < 0)
+		return 0;
+	return (noteValues[index].proportion / (float) lastBpm) * 240;
 }
 
 // === Private Helper =========================================================

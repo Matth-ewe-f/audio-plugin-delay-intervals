@@ -9,7 +9,8 @@
 class PluginEditor final :
     public juce::AudioProcessorEditor,
     public juce::AudioProcessorValueTreeState::Listener,
-    public juce::AsyncUpdater
+    public juce::AsyncUpdater,
+    private juce::Timer
 {
 public:
     // === Lifecycle ==========================================================
@@ -21,9 +22,10 @@ public:
     void paintOverChildren(juce::Graphics&) override;
     void resized() override;
 
-    // === Listener and Updated ===============================================
+    // === Superclass Functions ===============================================
     void parameterChanged(const juce::String&, float) override;
     void handleAsyncUpdate() override;
+    void timerCallback() override;
 
 private:
     // === Static Constants ===================================================
@@ -35,6 +37,8 @@ private:
     // === Global Controls (Left Side) ========================================
     ParameterControl delayTime;
     ComboBoxControl delayTimeSync;
+    juce::Label delayTimeSyncLabel;
+    juce::Colour normalTextColor;
     ParameterToggle noTempoSync;
     ParameterToggle tempoSync;
     ParameterControl numIntervals;
@@ -59,6 +63,7 @@ private:
     ParameterControl wetDry;
     // === Info for Drawing Controls ==========================================
     bool tempoSyncOn;
+    int tempoSyncNoteIndex;
     int numDelayAmps;
     float wetRatio;
     float autoFalloffRate;
@@ -118,6 +123,8 @@ private:
     // === Helper Functions ===================================================
     void addParameterControl(ParameterControl*);
     void addComboBoxControl(ComboBoxControl*);
+    void setNoteValueDelayLabel(int index);
+    void setMillisecondsDisplay(int milliseconds);
     void setHorizontalGradient
     (juce::Graphics&, juce::Colour c1, int x1, juce::Colour c2, int x2);
     void setVerticalGradient

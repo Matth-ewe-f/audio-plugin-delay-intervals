@@ -37,11 +37,10 @@ void ComboBoxControl::attachToParameter
         delete old;
     // attach to the new parameter
     parameterId = paramId;
-    attachment.reset(new ComboBoxAttachment(*treeState, paramId, comboBox));
     comboBox.clear();
     auto* param = treeState->getParameter(paramId);
     comboBox.addItemList(param->getAllValueStrings(), 1);
-    comboBox.setSelectedId((int) *treeState->getRawParameterValue(paramId));
+    attachment.reset(new ComboBoxAttachment(*treeState, paramId, comboBox));
 }
 
 void ComboBoxControl::setTitleText(const std::string& str)

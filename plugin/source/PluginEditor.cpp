@@ -41,8 +41,10 @@ PluginEditor::PluginEditor (PluginProcessor &p)
 {
     setWantsKeyboardFocus(true);
     setLookAndFeel(&lookAndFeel);
+    normalTextColor = delayTimeSyncLabel.findColour(juce::Label::textColourId);
     tempoSyncOn = *processorRef.tree.getRawParameterValue("tempo-sync") >= 1;
     processorRef.tree.addParameterListener("tempo-sync", this);
+    processorRef.tree.addParameterListener("delay-time-sync", this);
     processorRef.tree.addParameterListener("num-intervals", this);
     processorRef.tree.addParameterListener("dry-wet", this);
     processorRef.tree.addParameterListener("falloff", this);
@@ -52,11 +54,17 @@ PluginEditor::PluginEditor (PluginProcessor &p)
     setupRightSideGlobals();
     // set size
     setSize(col1Width + col2Width + col3Width, height);
+    // setup delay time display for tempo synced delays
+    std::string param = "delay-time-sync";
+    tempoSyncNoteIndex = (int) *processorRef.tree.getRawParameterValue(param);
+    setNoteValueDelayLabel(tempoSyncNoteIndex);
+    startTimer(100);
 }
 
 PluginEditor::~PluginEditor()
 {
     processorRef.tree.removeParameterListener("tempo-sync", this);
+    processorRef.tree.removeParameterListener("delay-time-sync", this);
     processorRef.tree.removeParameterListener("num-intervals", this);
     processorRef.tree.removeParameterListener("dry-wet", this);
     processorRef.tree.removeParameterListener("falloff", this);
@@ -73,6 +81,10 @@ void PluginEditor::setupLeftSideGlobals()
     delayTimeSync.setTitleText("Delay Time");
     delayTimeSync.attachToParameter(&processorRef.tree, "delay-time-sync");
     addComboBoxControl(&delayTimeSync);
+    delayTimeSyncLabel.setFont(juce::FontOptions(14));
+    delayTimeSyncLabel.setJustificationType(juce::Justification::centred);
+    delayTimeSyncLabel.setText("230ms", juce::dontSendNotification);
+    addAndMakeVisible(delayTimeSyncLabel);
     noTempoSync.toggle.setText("SEC");
     noTempoSync.toggle.setRadioGroupId(1, juce::dontSendNotification);
     addAndMakeVisible(noTempoSync.toggle);
@@ -271,12 +283,14 @@ void PluginEditor::resized()
     layoutRightSideGlobals();
 }
 
-// === Listener ===============================================================
+// === Superclass Functions ===================================================
 void PluginEditor::parameterChanged(const juce::String& param, float value)
 {
     if (param.compare("tempo-sync") == 0)
         tempoSyncOn = value >= 1;
-    if (param.compare("num-intervals") == 0)
+    else if (param.compare("delay-time-sync") == 0)
+        tempoSyncNoteIndex = (int) value;
+    else if (param.compare("num-intervals") == 0)
         numDelayAmps = (int) value;
     else if (param.compare("dry-wet") == 0)
         wetRatio = value / 100;
@@ -292,6 +306,11 @@ void PluginEditor::handleAsyncUpdate()
     repaint();
 }
 
+void PluginEditor::timerCallback()
+{
+    setNoteValueDelayLabel(tempoSyncNoteIndex);
+}
+
 // === Layout Functions =======================================================
 void PluginEditor::layoutLeftSideGlobals()
 {
@@ -303,12 +322,16 @@ void PluginEditor::layoutLeftSideGlobals()
     if (tempoSyncOn)
     {
         delayTime.setBounds(0, 0, 0, 0);
-        delayTimeSync.setBounds(x - 2, delaySectionY, col1KnobW + 4, col1KnobH);
+        int boxH = col1KnobH - 17;
+        delayTimeSync.setBounds(x - 2, delaySectionY, col1KnobW + 4, boxH);
+        int labelY = delaySectionY + col1KnobH - 17;
+        delayTimeSyncLabel.setBounds(x, labelY, col1KnobW, 17);
     }
     else
     {
         delayTime.setBounds(x - 2, delaySectionY, col1KnobW + 4, col1KnobH);
         delayTimeSync.setBounds(0, 0, 0, 0);
+        delayTimeSyncLabel.setBounds(0, 0, 0, 0);
     }
     int noTempoX = (col1Width - (syncToggleW * 2) - syncTogglePadX) / 2;
     int delayToggleY = delaySectionY + col1KnobH + syncTogglePadY;
@@ -585,6 +608,33 @@ void PluginEditor::addComboBoxControl(ComboBoxControl* control)
 {
     addAndMakeVisible(control->comboBox);
     addAndMakeVisible(control->title);
+}
+
+void PluginEditor::setNoteValueDelayLabel(int index)
+{
+    if (!tempoSyncOn)
+        return;
+    float seconds = processorRef.getSecondsForNoteValue(index);
+    int milliseconds = (int) std::round(seconds * 1000);
+    std::string s;
+    juce::Colour c;
+    if (milliseconds == 0)
+    {
+        s = "";
+    }
+    if (milliseconds <= 250)
+    {
+        s = std::to_string(milliseconds) + "ms"; 
+        c = normalTextColor;
+    }
+    else
+    {
+        s = "Too Long";
+        c = juce::Colours::red;
+    }
+    delayTimeSyncLabel.setText(s, juce::sendNotificationAsync);
+    delayTimeSyncLabel.setColour(juce::Label::textColourId, c);
+    repaint();
 }
 
 void PluginEditor::setHorizontalGradient

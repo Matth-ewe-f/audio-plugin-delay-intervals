@@ -6,6 +6,13 @@
 #include "DelayAmp.h"
 #include "DelayInterval.h"
 
+typedef struct NoteValue
+{
+    std::string name;
+    float proportion;
+}
+NoteValue;
+
 class PluginProcessor final : public juce::AudioProcessor
 {
 public:
@@ -75,8 +82,9 @@ public:
     void notifyHostOfStateChange();
 
     // === State ==============================================================
-    void getStateInformation (juce::MemoryBlock& destData) override;
-    void setStateInformation (const void* data, int sizeInBytes) override;
+    void getStateInformation(juce::MemoryBlock& destData) override;
+    void setStateInformation(const void* data, int sizeInBytes) override;
+    float getSecondsForNoteValue(int index);
 
     // === Factory Functions ==================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -91,8 +99,11 @@ private:
     // === Constants ==========================================================
     static const float maxDelayTime;
     static constexpr int maxIntervals = 16;
+    static constexpr size_t numNoteValues = 6;
+    static const NoteValue noteValues[numNoteValues];
     // === Mutable Variables ==================================================
     double lastSampleRate;
+    double lastBpm;
     size_t lastDelay;
     size_t lastIntervals;
     float lastDryWet;
