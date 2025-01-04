@@ -127,12 +127,12 @@ std::unique_ptr<juce::AudioParameterFloat> createDelayAmpParameter
     auto normalize = [] (float min, float max, float value)
     {
         juce::ignoreUnused(min, max);
-        return juce::jmax(0.0f, 1.749f - (1.3022f / (value + 0.7363f)));
+        return 1.55f - (0.8525f / (0.55f + value));
     };
     auto denormalize = [] (float min, float max, float value)
     {
         juce::ignoreUnused(min, max);
-        return value <= 0 ? 0 : (1.3022f / (1.75f - value)) - 0.7363f;
+        return (0.8525f / (1.55f - value)) - 0.55f;
     };
     juce::AudioParameterFloatAttributes attr;
     attr = attr.withStringFromValueFunction([] (float value, int len)
