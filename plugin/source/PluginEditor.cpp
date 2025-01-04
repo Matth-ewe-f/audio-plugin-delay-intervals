@@ -27,7 +27,6 @@ const int PluginEditor::col2ButtonMargin = 8;
 const int PluginEditor::col3Width = 120;
 const int PluginEditor::col3KnobW = 72;
 const int PluginEditor::col3KnobH = 80;
-const int PluginEditor::col3WetDryH = 102;
 const int PluginEditor::col3KnobMargin = 24;
 const int PluginEditor::col3ToggleW = 52;
 const int PluginEditor::col3ToggleH = 24;
@@ -47,7 +46,7 @@ PluginEditor::PluginEditor (PluginProcessor &p)
     processorRef.tree.addParameterListener("tempo-sync", this);
     processorRef.tree.addParameterListener("delay-time-sync", this);
     processorRef.tree.addParameterListener("num-intervals", this);
-    processorRef.tree.addParameterListener("dry-wet", this);
+    processorRef.tree.addParameterListener("wet", this);
     processorRef.tree.addParameterListener("falloff", this);
     // setup components
     setupLeftSideGlobals();
@@ -67,7 +66,7 @@ PluginEditor::~PluginEditor()
     processorRef.tree.removeParameterListener("tempo-sync", this);
     processorRef.tree.removeParameterListener("delay-time-sync", this);
     processorRef.tree.removeParameterListener("num-intervals", this);
-    processorRef.tree.removeParameterListener("dry-wet", this);
+    processorRef.tree.removeParameterListener("wet", this);
     processorRef.tree.removeParameterListener("falloff", this);
     setLookAndFeel(nullptr);
 }
@@ -112,7 +111,7 @@ void PluginEditor::setupChannels()
     juce::AudioProcessorValueTreeState* tree = &processorRef.tree;
     // get processor parameters that influence layout
     numDelayAmps = (int) *tree->getRawParameterValue("num-intervals");
-    wetRatio = *tree->getRawParameterValue("dry-wet") / 100;
+    wetRatio = *tree->getRawParameterValue("wet") / 100;
     float f = *tree->getRawParameterValue("falloff");
     autoFalloffRate = 1 - (f / 100);
     // setup filter controls
@@ -245,12 +244,10 @@ void PluginEditor::setupRightSideGlobals()
     falloff.setTitleText("Falloff");
     falloff.attachToParameter(&processorRef.tree, "falloff");
     addParameterControl(&falloff);
-    dryMix.setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
-    dryMix.setTitleText("Dry");
-    addParameterControl(&dryMix);
-    wetMix.setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
-    wetMix.setTitleText("Wet");
-    addParameterControl(&wetMix);
+    wetDry.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
+    wetDry.setTitleText("Wet");
+    wetDry.attachToParameter(&processorRef.tree, "wet");
+    addParameterControl(&wetDry);
 }
 
 // === Graphics ===============================================================
@@ -295,7 +292,7 @@ void PluginEditor::parameterChanged(const juce::String& param, float value)
         tempoSyncNoteIndex = (int) value;
     else if (param.compare("num-intervals") == 0)
         numDelayAmps = (int) value;
-    else if (param.compare("dry-wet") == 0)
+    else if (param.compare("wet") == 0)
         wetRatio = value / 100;
     else if (param.compare("falloff") == 0)
         autoFalloffRate = 1 - (value / 100);
@@ -397,8 +394,8 @@ void PluginEditor::layoutDelayAmps()
     // layout the sliders
     for (int i = 0;i < numDelayAmps;i++)
     {
-        // scale heights by the dry-wet ratio and auto-falloff
-        float p = juce::jmin((i == 0 ? 1 - wetRatio : wetRatio) * 2, 1.0f);
+        // scale heights by the wet ratio and auto-falloff
+        float p = i == 0 ? 1 : wetRatio;
         p *= pow(autoFalloffRate, (float) i);
         // denormalize the amplitude-to-height mapping a bit for visual appeal
         float factor = 1.057f * pow(p + 0.02f, 0.5f) - 0.0684f;
@@ -421,7 +418,7 @@ void PluginEditor::layoutRightSideGlobals()
     int toggleX = col1Width + col2Width + (col3Width - col3ToggleW) / 2;
     int knobX = col1Width + col2Width + (col3Width - col3KnobW) / 2;
     int totalH = col3ToggleLabelH + 2 * (col3ToggleH + col3ToggleMargin)
-        + col3KnobH + col3WetDryH + 2 * col3KnobMargin;
+        + 2 * (col3KnobH + col3KnobMargin);
     int y1 = (getHeight() - totalH) / 2 + col3ToggleLabelH + col3ToggleMargin;
     linkFilters.setBounds(toggleX, y1, col3ToggleW, col3ToggleH);
     int y2 = y1 + col3ToggleH + col3ToggleMargin;
@@ -429,8 +426,7 @@ void PluginEditor::layoutRightSideGlobals()
     int y3 = y2 + col3ToggleH + col3KnobMargin;
     falloff.setBounds(knobX, y3, col3KnobW, col3KnobH);
     int y4 = y3 + col3KnobH + col3KnobMargin;
-    dryMix.setBounds(knobX, y4, col3KnobW / 2, col3WetDryH);
-    wetMix.setBounds(knobX + col3KnobW / 2, y4, col3KnobW / 2, col3WetDryH);
+    wetDry.setBounds(knobX, y4, col3KnobW, col3KnobH);
 }
 
 // == Drawing Functions ======================================================
@@ -582,17 +578,17 @@ void PluginEditor::drawRightSideGlobals(juce::Graphics& g)
     // draw backgrounds for controls
     int x = col1Width + col2Width + (col3Width - col3KnobW) / 2;
     int totalH = col3ToggleLabelH + 2 * (col3ToggleH + col3ToggleMargin)
-        + col3KnobH + col3WetDryH + 2 * col3KnobMargin;
+        + 2 * (col3KnobH + col3KnobMargin);
     int y1 = (getHeight() - totalH) / 2;
     g.setColour(findColour(CtmColourIds::darkBgColourId));
     int toggleAreaH = col3ToggleLabelH + 2 * (col3ToggleH + col3ToggleMargin);
     int w = col3KnobW;
     int r = 12;
-    g.fillRoundedRectangle(x - 6, y1 - 12, w + 12, toggleAreaH + 18, r);
+    g.fillRoundedRectangle(x - 6, y1 - 6, w + 12, toggleAreaH + 12, r);
     int y2 = y1 + toggleAreaH + col3KnobMargin;
     g.fillRoundedRectangle(x - 6, y2 - 6, w + 12, col3KnobH + 12, r);
     int y3 = y2 + col3KnobH + col3KnobMargin;
-    g.fillRoundedRectangle(x - 6, y3 - 6, w + 12, col3WetDryH + 18, r);
+    g.fillRoundedRectangle(x - 6, y3 - 6, w + 12, col3KnobH + 12, r);
     // draw text label for the link buttons
     auto center = juce::Justification::centred;
     g.setColour(juce::Colours::white);
