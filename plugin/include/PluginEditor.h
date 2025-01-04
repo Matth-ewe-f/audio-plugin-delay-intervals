@@ -60,8 +60,7 @@ private:
     ParameterToggle linkAmps;
     ParameterToggle linkFilters;
     ParameterControl falloff;
-    ParameterControl dryMix;
-    ParameterControl wetMix;
+    ParameterControl wetDry;
     // === Info for Drawing Controls ==========================================
     bool tempoSyncOn;
     int tempoSyncNoteIndex;
@@ -95,7 +94,6 @@ private:
     static const int col3Width;
     static const int col3KnobW;
     static const int col3KnobH;
-    static const int col3WetDryH;
     static const int col3KnobMargin;
     static const int col3ToggleW;
     static const int col3ToggleH;
