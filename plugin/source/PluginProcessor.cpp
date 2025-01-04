@@ -232,8 +232,11 @@ void PluginProcessor::processBlock
 	size_t numSamples = (size_t) buffer.getNumSamples();
 	size_t curDelay = getDelaySamples();
 	bool delayChanged = curDelay != lastDelay && lastDelay != LONG_MAX;
-	if (curDelay >= (maxDelayTime / 1000) * lastSampleRate)
+	if (curDelay > (maxDelayTime / 1000) * lastSampleRate)
+	{
 		delayChanged = true; // delay value is too long, so fade out signal
+		curDelay = (size_t) ((maxDelayTime / 1000) * lastSampleRate);
+	}
 	size_t delay = delayChanged ? lastDelay : curDelay;
 	size_t curIntervals = getCurrentNumIntervals();
 	bool intervalsChanged = curIntervals != lastIntervals;
