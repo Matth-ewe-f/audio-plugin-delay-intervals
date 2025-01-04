@@ -216,6 +216,8 @@ void PluginProcessor::processBlock
 	size_t numSamples = (size_t) buffer.getNumSamples();
 	size_t curDelay = getDelaySamples();
 	bool delayChanged = curDelay != lastDelay && lastDelay != LONG_MAX;
+	if (curDelay >= (maxDelayTime / 1000) * lastSampleRate)
+		delayChanged = true; // delay value is too long, so fade out signal
 	size_t delay = delayChanged ? lastDelay : curDelay;
 	size_t curIntervals = getCurrentNumIntervals();
 	bool intervalsChanged = curIntervals != lastIntervals;
@@ -478,8 +480,17 @@ float PluginProcessor::getSecondsForNoteValue(int index)
 // === Private Helper =========================================================
 size_t PluginProcessor::getDelaySamples()
 {
-	float ms = *tree.getRawParameterValue("delay-time");
-	return (size_t) (lastSampleRate * ms / 1000);
+	if (*tree.getRawParameterValue("tempo-sync") >= 1)
+	{
+		float noteIndex = *tree.getRawParameterValue("delay-time-sync");
+		float sec = getSecondsForNoteValue(noteIndex);
+		return (size_t) (lastSampleRate * sec);
+	}
+	else
+	{
+		float ms = *tree.getRawParameterValue("delay-time");
+		return (size_t) (lastSampleRate * ms / 1000);
+	}
 }
 
 size_t PluginProcessor::getCurrentNumIntervals()
