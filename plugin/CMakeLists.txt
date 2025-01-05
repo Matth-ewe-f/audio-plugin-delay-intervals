@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Delay-Intervals VERSION 1.0.0)
+project(Delay-Intervals VERSION 1.0.1)
 
 juce_add_plugin(
     ${PROJECT_NAME}
