@@ -52,13 +52,13 @@ PluginEditor::PluginEditor (PluginProcessor &p)
     setupLeftSideGlobals();
     setupChannels();
     setupRightSideGlobals();
-    // set size
-    setSize(col1Width + col2Width + col3Width, height);
     // setup delay time display for tempo synced delays
     std::string param = "delay-time-sync";
     tempoSyncNoteIndex = (int) *processorRef.tree.getRawParameterValue(param);
     setNoteValueDelayLabel(tempoSyncNoteIndex);
     startTimer(100);
+    // set size
+    setSize(col1Width + col2Width + col3Width, height);
 }
 
 PluginEditor::~PluginEditor()

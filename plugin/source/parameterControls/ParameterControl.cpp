@@ -2,7 +2,8 @@
 
 // === Lifecycle ==============================================================
 ParameterControl::ParameterControl()
-    : parameterName(""), showLabel(true), titleText(""), everAttached(false)
+    : parameterName(""), showLabel(true), titleText(""), tightText(false),
+    everAttached(false)
 {
     bounds = juce::Rectangle<int>(0, 0, 0, 0);
     setSliderStyle(juce::Slider::RotaryVerticalDrag);
