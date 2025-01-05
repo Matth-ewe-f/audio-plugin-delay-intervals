@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 project(Delay-Intervals)
 set(CMAKE_CXX_STANDARD 23)
 set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib)
-# set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
 include(cmake/CPM.cmake)
 
 CPMAddPackage(

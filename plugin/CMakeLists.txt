@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Delay-Intervals VERSION 0.1.0)
+project(Delay-Intervals VERSION 1.0.0)
 
 juce_add_plugin(
     ${PROJECT_NAME}
@@ -10,7 +10,7 @@ juce_add_plugin(
     PLUGIN_MANUFACTURER_CODE Mthe
     PLUGIN_CODE DLYI
     FORMATS VST3 AU Standalone
-    PRODUCT_NAME ${PROJECT_NAME}
+    PRODUCT_NAME "Delay Intervals"
 )
 
 target_sources(

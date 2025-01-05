@@ -26,7 +26,7 @@ public:
 
     // === Plugin Information =================================================
     inline const juce::String getName() const override
-        { return "Delay-Intervals"; }
+        { return "Delay Intervals"; }
 
     inline bool hasEditor() const override { return true; }
     inline double getTailLengthSeconds() const override { return 1.0; }
