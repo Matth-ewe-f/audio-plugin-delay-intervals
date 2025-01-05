@@ -4,7 +4,7 @@
   <img src="/screenshots/shot3.png" width="49%" /> 
 </p>
 
-An audio plugin that can create fully customizable delay patterns, with adjustable volume, panning, and interval between repeats. No longer do you have to rely on stereo crossfeed formulae to create the rhythmic delay effect that you want! There are also built-in filters for the delayed sound, and the capability to loop indefinitely. Use this plugin to produce shimmering, bouncing atmospheric effects, or phrenetic, energetic rhythimc patterns. See the **[Installation Guide](#installation-guide)** to get started using Delay Intervals!
+An audio plugin that can create fully customizable delay patterns, with adjustable volume, panning, and interval between repeats. No longer do you have to rely on stereo crossfeed formulae to create the rhythmic delay effect that you want! There are also built-in filters for the delayed sound, and the capability to loop indefinitely. Use this plugin to produce shimmering, bouncing atmospheric effects, or phrenetic, energetic rhythimc patterns. Delay Intervals can be downloaded from the "Releases" section of this repository, or see the **[Installation Guide](#installation-guide)** to build it from source yourself.
 
 ## Description
 Delay Intervals provides up to 16 stereo "intervals" of delay (the first one being the dry signal), with adjustable delay length and the ability to loop audio from the last interval back into the first one. Delay time between each interval can be synched to the tempo of your DAW, or set independently from 0 to 250 milliseconds. Each interval can have its individual volume adjusted (or muted) for each channel, and audio can be set to fade gradually with each repeat (like partial feedback in a typical delay).
@@ -16,7 +16,7 @@ Delay Intervals also provides a 2nd order low-pass and high-pass filter for each
 * [JUCE](https://juce.com/)
 
 ## Installation Guide
-As of now, the only way to install Delay Intervals is to download the sources files and build it yourself using the command line. Soon I will make pre-built versions available for download.
+You can download Delay Intervals from the "Releases" section. You can also follow these steps to download the source code and build it yourself.
 
 1. [Download and Install CMake](https://cmake.org/download/)
 
