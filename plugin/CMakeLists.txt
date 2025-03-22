@@ -7,6 +7,8 @@ juce_add_plugin(
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
+    # MICROPHONE_PERMISSION_ENABLED TRUE
+    # MICROPHONE_PERMISSION_TEXT "Delay Intervals would like to access your microphone"
     PLUGIN_MANUFACTURER_CODE Mthe
     PLUGIN_CODE DLYI
     FORMATS VST3 AU Standalone
