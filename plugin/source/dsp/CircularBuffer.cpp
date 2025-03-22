@@ -2,243 +2,203 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "Filter.h"
 
-// === Lifecycle ==============================================================
-CircularBuffer::CircularBuffer() : CircularBuffer(44100) { }
+CircularBuffer::CircularBuffer() : CircularBuffer(1024) { }
 
-CircularBuffer::CircularBuffer(size_t capacity)
-    : buffer(juce::jmax(capacity, 16UL)), leastRecentSample(0), numSamples(0)
-{ }
+CircularBuffer::CircularBuffer(size_t capacity) : sampleCount(0)
+{
+    resize(capacity);
+}
 
-// === Add Samples ============================================================
 void CircularBuffer::addSample(const float sample)
 {
-    buffer[leastRecentSample] = sample;
-    leastRecentSample++;
-    if (leastRecentSample == buffer.size())
-        leastRecentSample = 0;
-    if (numSamples < buffer.size())
-        numSamples++;
+    buffer[capacityMask(sampleCount++)] = sample;
 }
 
-void CircularBuffer::addSamples(const float* samples, size_t length)
+void CircularBuffer::addSamples(const float* samples, size_t numToAdd)
 {
-    length = juce::jmin(length, buffer.size());
-    size_t limit = juce::jmin(leastRecentSample + length, buffer.size());
-    size_t srcIndex = 0;
-    for (size_t i = leastRecentSample;i < limit;i++)
-        buffer[i] = samples[srcIndex++];
-    // wrap around to the beginning of the buffer if necessary
-    for (size_t i = 0;srcIndex < length;i++)
-        buffer[i] = samples[srcIndex++];
-    numSamples = juce::jmin(numSamples + length, buffer.size());
-    leastRecentSample = (leastRecentSample + length) % buffer.size();
+    jassert(numToAdd <= buffer.size());
+
+    size_t startSample = capacityMask(sampleCount);
+    size_t spaceBeforeWrap = buffer.size() - startSample;
+    size_t numPreWrap = juce::jmin(numToAdd, spaceBeforeWrap);
+    size_t numPostWrap = numToAdd - numPreWrap;
+
+    memcpy(buffer.data() + startSample, samples, numPreWrap * sizeof(float));
+    memcpy(buffer.data(), samples + numPreWrap, numPostWrap * sizeof(float));
+
+    sampleCount += numToAdd;
 }
 
-void CircularBuffer::addSamplesRamped(const float* samples, size_t length)
+void CircularBuffer::addSamplesRamped(const float* samples, size_t numToAdd)
 {
-    length = juce::jmin(length, buffer.size());
-    size_t limit = juce::jmin(leastRecentSample + length, buffer.size());
-    size_t srcIndex = 0;
+    // sampleCount changes as a result of addSamples, so save its value here
+    size_t startSample = capacityMask(sampleCount);
+    addSamples(samples, numToAdd);
+
     float gain = 0;
-    float gainStep = 1.0f / length;
-    for (size_t i = leastRecentSample;i < limit;i++)
+    float gainStep = 1.0f / numToAdd;
+    size_t numPreWrap = juce::jmin(numToAdd, buffer.size() - startSample);
+    size_t numPostWrap = numToAdd - numPreWrap;
+
+    for (size_t i = startSample;i < numPreWrap;i++)
     {
         gain += gainStep;
-        buffer[i] = samples[srcIndex++] * gain;
+        buffer[i] *= gain;
     }
-    // wrap around to the beginning of the buffer if necessary
-    for (size_t i = 0;srcIndex < length;i++)
+    for (size_t i = 0;i < numPostWrap;i++)
     {
-        gain += gainStep;
-        buffer[i] = samples[srcIndex++] * gain;
+        gain *= gainStep;
+        buffer[i] *= gain;
     }
-    numSamples = juce::jmin(numSamples + length, buffer.size());
-    leastRecentSample = (leastRecentSample + length) % buffer.size();
 }
 
-// === Get Samples ============================================================
 float CircularBuffer::getSample(size_t delay)
 {
-    if (delay >= numSamples)
-        return 0;
-    size_t index = leastRecentSample - 1 - delay;
-    if (index > buffer.size())
-        index += buffer.size(); // correct underflow
-    return buffer[index];
+    return buffer[capacityMask(sampleCount - 1 - delay)];
 }
 
-void CircularBuffer::getSamples
-(size_t delay, float* output, size_t len)
+void CircularBuffer::getSamples(size_t delay, float* output, size_t length)
 {
-    // setup counters and boundaries
-    size_t i = leastRecentSample - delay - len;
-    if (i > buffer.size())
-        i += buffer.size(); // correct underflow
-    size_t limit = juce::jmin(i + len, buffer.size());
-    size_t destIndex = 0;
-    // loop through the samples
-    for (;i < limit;i++)
-    {
-        float s = delay + len - destIndex <= numSamples ? buffer[i] : 0;
-        output[destIndex++] = s;
-    }
-    // wrap around to the beginning of the buffer if necessary
-    for (i = 0;destIndex < len;i++)
-    {
-        float s = delay + len - destIndex <= numSamples ? buffer[i] : 0;
-        output[destIndex++] = s;
-    }
+    jassert(length <= buffer.size());
+
+    size_t start = capacityMask(sampleCount - delay - length);
+    size_t numPreWrap = juce::jmin(length, buffer.size() - start);
+    size_t numPostWrap = length - numPreWrap;
+
+    memcpy(output, buffer.data() + start, numPreWrap * sizeof(float));
+    memcpy(output + numPreWrap, buffer.data(), numPostWrap * sizeof(float));
 }
 
-void CircularBuffer::sumWithSamples
-(size_t delay, float* output, size_t len, float gain)
+void CircularBuffer::sumWithSamples(size_t delay, float* output, size_t length,
+    float gain)
 {
     if (juce::approximatelyEqual(gain, 0.0f))
+    {
         return;
-    // setup counters and boundaries
-    size_t i = leastRecentSample - delay - len;
-    if (i > buffer.size())
-        i += buffer.size(); // correct underflow
-    size_t limit = juce::jmin(i + len, buffer.size());
-    size_t destIndex = 0;
-    // loop through the samples
-    for (;i < limit;i++)
-    {
-        float s = delay + len - destIndex <= numSamples ? buffer[i] : 0;
-        output[destIndex++] += s * gain;
     }
-    // wrap around to the beginning of the buffer if necessary
-    for (i = 0;destIndex < len;i++)
+
+    size_t start = capacityMask(sampleCount - delay - length);
+    size_t numPreWrap = juce::jmin(length, buffer.size() - start);
+    size_t numPostWrap = length - numPreWrap;
+
+    for (size_t i = 0;i < numPreWrap;i++)
     {
-        float s = delay + len - destIndex <= numSamples ? buffer[i] : 0;
-        output[destIndex++] += s * gain;
+        output[i] += buffer[i++ + start] * gain;
+    }
+    for (size_t i = 0;i < numPostWrap;i++)
+    {
+        output[i + numPreWrap] += buffer[i++] * gain;
     }
 }
 
-void CircularBuffer::sumWithSamplesRamped
-(size_t delay, float* output, size_t len, float start, float end)
+void CircularBuffer::sumWithSamplesRamped(size_t delay, float* output,
+    size_t length, float startGain, float endGain)
 {
-    if (juce::approximatelyEqual(start, end))
+    if (juce::approximatelyEqual(startGain, endGain))
     {
-        sumWithSamples(delay, output, len, start);
+        sumWithSamples(delay, output, length, startGain);
         return;
     }
-    // setup counters and boundaries
-    size_t i = leastRecentSample - delay - len;
-    if (i > buffer.size())
-        i += buffer.size(); // correct underflow
-    size_t limit = juce::jmin(i + len, buffer.size());
-    size_t destIndex = 0;
-    float gain = start;
-    float gainStep = (end - start) / len;
-    // loop through the samples
-    for (;i < limit;i++)
+
+    size_t start = capacityMask(sampleCount - delay - length);
+    size_t numPreWrap = juce::jmin(length, buffer.size() - start);
+    size_t numPostWrap = length - numPreWrap;
+    float gain = startGain;
+    float gainStep = (endGain - startGain) / length;
+
+    for (size_t i = 0;i < numPreWrap;i++)
     {
         gain += gainStep;
-        float s = delay + len - destIndex <= numSamples ? buffer[i] : 0;
-        output[destIndex++] += s * gain;
+        output[i] += buffer[i++ + start] * gain;
     }
-    // wrap around to the beginning of the buffer if necessary
-    for (i = 0;destIndex < len;i++)
+    for (size_t i = 0;i < numPostWrap;i++)
     {
         gain += gainStep;
-        float s = delay + len - destIndex <= numSamples ? buffer[i] : 0;
-        output[destIndex++] += s * gain;
+        output[i + numPreWrap] += buffer[i++] * gain;
     }
 }
 
-// === Manipulate Samples =====================================================
-void CircularBuffer::applyGainToSamples(size_t delay, size_t len, float gain)
+void CircularBuffer::applyGainToSamples(size_t delay, size_t length,
+    float gain)
 {
-    if (delay > numSamples || juce::approximatelyEqual(gain, 1.0f))
+    if (juce::approximatelyEqual(gain, 1.0f))
+    {
         return;
-    // setup counters and boundaries
-    size_t start = leastRecentSample - delay - len;
-    if (start > buffer.size())
-        start += buffer.size(); // correct underflow
-    size_t limit = juce::jmin(start + len, buffer.size());
-    // loop through the samples
-    for (size_t i = start;i < limit;i++)
+    }
+
+    size_t start = capacityMask(sampleCount - delay - length);
+    size_t numPreWrap = juce::jmin(length, buffer.size() - start);
+    size_t numPostWrap = length - numPreWrap;
+
+    for (size_t i = 0;i < numPreWrap;i++)
+    {
+        buffer[start + i] *= gain;
+    }
+    for (size_t i = 0;i < numPostWrap;i++)
+    {
         buffer[i] *= gain;
-    // wrap around to the beginning of the buffer if necessary
-    size_t wrap = start + len - limit;
-    for (size_t i = 0;i < wrap;i++)
+    }
+}
+
+void CircularBuffer::applyGainToSamples(size_t delay, size_t length,
+    float startGain, float endGain)
+{
+    if (juce::approximatelyEqual(startGain, endGain))
+    {
+        applyGainToSamples(delay, length, startGain);
+        return;
+    }
+
+    size_t startSample = capacityMask(sampleCount - delay - length);
+    size_t numPreWrap = juce::jmin(length, buffer.size() - startSample);
+    size_t numPostWrap = length - numPreWrap;
+    float gain = startGain;
+    float gainStep = (endGain - startGain) / length;
+
+    for (size_t i = 0;i < numPreWrap;i++)
+    {
+        gain += gainStep;
+        buffer[startSample + i] *= gain;
+    }
+    for (size_t i = 0;i < numPostWrap;i++)
+    {
+        gain += gainStep;
         buffer[i] *= gain;
+    }
 }
 
-void CircularBuffer::applyGainToSamples
-(size_t delay, size_t len, float start, float end)
+void CircularBuffer::applyFilterToSamples(size_t delay, size_t length,
+    Filter* filter)
 {
-    bool startIsOne = juce::approximatelyEqual(start, 1.0f);
-    bool endIsOne = juce::approximatelyEqual(end, 1.0f);
-    if (startIsOne && endIsOne)
-        return;
-    if (juce::approximatelyEqual(start, end))
-    {
-        applyGainToSamples(delay, len, start);
-        return;
-    }
-    // setup counters and boundaries
-    size_t startIndex = leastRecentSample - delay - len;
-    if (startIndex > buffer.size())
-        startIndex += buffer.size(); // correct underflow
-    size_t limit = juce::jmin(startIndex + len, buffer.size());
-    float gainStep = (end - start) / len;
-    // loop through the samples
-    for (size_t i = startIndex;i < limit;i++)
-    {
-        start += gainStep;
-        buffer[i] *= start;
-    }
-    // wrap around to the beginning of the buffer if necessary
-    size_t wrap = startIndex + len - limit;
-    for (size_t i = 0;i < wrap;i++)
-    {
-        start += gainStep;
-        buffer[i] *= start;
-    }
+    size_t start = capacityMask(sampleCount - delay - length);
+    size_t numPreWrap = juce::jmin(length, buffer.size() - start);
+    size_t numPostWrap = length - numPreWrap;
+
+    filter->processSamples(buffer.data() + start, numPreWrap);
+    filter->processSamples(buffer.data(), numPostWrap);
 }
 
-void CircularBuffer::applyFilterToSamples
-(size_t delay, size_t len, Filter* filter)
-{
-    // get bounds of area to process
-    size_t start = leastRecentSample - delay - len;
-    size_t end = start + len;
-    // handle underflow in bounds
-    if (start > buffer.size())
-        start += buffer.size();
-    if (end > buffer.size())
-        end += buffer.size();
-    // process samples
-    if (start > end && end != 0)
-    {
-        float* data = buffer.data();
-        filter->processSamples(data + start, buffer.size() - start);
-        filter->processSamples(data, end);
-    }
-    else
-    {
-        filter->processSamples(buffer.data() + start, len);
-    }
-}
-
-// === Other Operations =======================================================
 void CircularBuffer::clear()
 {
-    leastRecentSample = 0;
-    numSamples = 0;
+    sampleCount = 0;
+    memset(buffer.data(), 0, buffer.size() * sizeof(float));
 }
 
 void CircularBuffer::resize(size_t newLength)
 {
-    buffer.resize(juce::jmax(newLength, 16UL));
+    jassert(juce::isPowerOfTwo(newLength) && newLength >= 2);
+    buffer.resize(newLength);
     clear();
 }
 
 void CircularBuffer::resize(double sampleRate, float maxDelaySeconds)
 {
-    double maxSamples = sampleRate * maxDelaySeconds;
-    size_t newLength = (size_t) std::ceil(maxSamples);
+    int maxSamples = static_cast<int>(std::ceil(sampleRate * maxDelaySeconds));
+    size_t newLength = static_cast<size_t>(juce::nextPowerOfTwo(maxSamples));
     resize(newLength);
+}
+
+size_t CircularBuffer::capacityMask(size_t sample)
+{
+    return sample & (buffer.size() - 1);
 }
