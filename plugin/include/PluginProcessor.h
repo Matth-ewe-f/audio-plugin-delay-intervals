@@ -4,7 +4,7 @@
 #include <melatonin_perfetto/melatonin_perfetto.h>
 #include "CircularBuffer.h"
 #include "DelayAmp.h"
-#include "DelayInterval.h"
+#include "Filter.h"
 
 typedef struct NoteValue
 {

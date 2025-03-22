@@ -85,6 +85,8 @@ float Filter::processSample(float sample)
 
 void Filter::processSamples(float* samples, size_t length)
 {
+    if (length == 0)
+        return;
     // copy the dry signal to the temporary buffer (for mixing)
     for (size_t i = 0;i < length;i++)
         tempBuffer[i] = samples[i];
