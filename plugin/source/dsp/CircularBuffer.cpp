@@ -83,11 +83,11 @@ void CircularBuffer::sumWithSamples(size_t delay, float* output, size_t length,
 
     for (size_t i = 0;i < numPreWrap;i++)
     {
-        output[i] += buffer[i++ + start] * gain;
+        output[i] += buffer[i + start] * gain;
     }
     for (size_t i = 0;i < numPostWrap;i++)
     {
-        output[i + numPreWrap] += buffer[i++] * gain;
+        output[i + numPreWrap] += buffer[i] * gain;
     }
 }
 
@@ -109,12 +109,12 @@ void CircularBuffer::sumWithSamplesRamped(size_t delay, float* output,
     for (size_t i = 0;i < numPreWrap;i++)
     {
         gain += gainStep;
-        output[i] += buffer[i++ + start] * gain;
+        output[i] += buffer[i + start] * gain;
     }
     for (size_t i = 0;i < numPostWrap;i++)
     {
         gain += gainStep;
-        output[i + numPreWrap] += buffer[i++] * gain;
+        output[i + numPreWrap] += buffer[i] * gain;
     }
 }
 
