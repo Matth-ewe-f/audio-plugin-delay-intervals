@@ -20,7 +20,7 @@ You can download Delay Intervals from the "Releases" section. You can also follo
 
 1. [Download and Install CMake](https://cmake.org/download/)
 
-2. Verify that you have a C++ 23 compatible compiler on your machine
+2. Verify that you have a C++ 20 compatible compiler on your machine
 
 3. Clone this repository onto your local machine with the below command in a dedicated directory
 
