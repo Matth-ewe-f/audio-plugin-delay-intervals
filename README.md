@@ -4,6 +4,8 @@
   <img src="/screenshots/shot3.png" width="49%" /> 
 </p>
 
+[Video Demo](https://www.youtube.com/watch?v=hf0XOM7_4P4)
+
 An audio plugin that can create fully customizable delay patterns, with adjustable volume, panning, and interval between repeats. No longer do you have to rely on stereo crossfeed formulae to create the rhythmic delay effect that you want! There are also built-in filters for the delayed sound, and the capability to loop indefinitely. Use this plugin to produce shimmering, bouncing atmospheric effects, or phrenetic, energetic rhythimc patterns. Delay Intervals can be downloaded from the "Releases" section of this repository, or see the **[Installation Guide](#installation-guide)** to build it from source yourself.
 
 ## Description
