@@ -4,6 +4,7 @@
 struct DelayAmp : public juce::AudioProcessorValueTreeState::Listener
 {
 public:
+    DelayAmp();
     ~DelayAmp() override;
 
     void listenTo(juce::AudioProcessorValueTreeState*, std::string);

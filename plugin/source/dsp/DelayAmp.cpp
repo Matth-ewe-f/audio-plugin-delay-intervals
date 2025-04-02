@@ -1,5 +1,9 @@
 #include "DelayAmp.h"
 
+DelayAmp::DelayAmp()
+    : lastValue(0), currentValue(0), tree(nullptr), parameterId("")
+{ }
+
 DelayAmp::~DelayAmp()
 {
     tree->removeParameterListener(parameterId, this);
@@ -8,13 +12,18 @@ DelayAmp::~DelayAmp()
 void DelayAmp::listenTo
 (juce::AudioProcessorValueTreeState* stateTree, std::string param)
 {
-    if (parameterId.compare("") != 0)
-        tree->removeParameterListener(parameterId, this);
     stateTree->addParameterListener(param, this);
-    float value = *stateTree->getRawParameterValue(param);
-    currentValue = value;
-    if (parameterId.compare("") == 0)
-        lastValue = value;
+    currentValue = *stateTree->getRawParameterValue(param);
+
+    if (tree == nullptr && parameterId.compare("") != 0)
+    {
+        tree->removeParameterListener(parameterId, this);
+    }
+    else
+    {
+        lastValue = currentValue;
+    }
+
     tree = stateTree;
     parameterId = param;
 }
@@ -29,6 +38,7 @@ float DelayAmp::getLastValue()
 {
     float result = lastValue;
     lastValue = currentValue;
+
     return result;
 }
 
