@@ -1,33 +1,28 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 
-class SliderLabel :
-    public juce::TextEditor,
-    public juce::Slider::Listener
+class SliderLabel : public juce::TextEditor, public juce::Slider::Listener
 {
 public:
-    // === Lifecycle ==========================================================
     SliderLabel();
 
-    // === Listener ===========================================================
-    void listenTo(juce::Slider*);
+    void listenTo(juce::Slider* slider);
 
-    // === Text Manipulation ==================================================
     void setPrefix(std::string s);
     void setPostfix(std::string s);
-    void updateText(juce::Slider*);
-    void setTypeNegativeValues(bool);
-    void setMaxDecimals(int);
-    void setShowPlusForPositive(bool);
-    void setChoicesArrayForChoiceParameter(juce::StringArray);
+    void updateText(juce::Slider* slider);
 
-    // === Focus Functions ====================================================
-    void focusGained(juce::Component::FocusChangeType) override;
-    void focusLost(juce::Component::FocusChangeType) override;
+    void setTypeNegativeValues(bool typeNegatives);
+    void setMaxDecimals(int max);
+    void setShowPlusForPositive(bool show);
+    void setChoicesArrayForChoiceParameter(juce::StringArray choicesArray);
 
-    // === Font Setters =======================================================
-    void setMainFont(const juce::FontOptions&);
-    void setPostfixFont(const juce::FontOptions&);
+    void setMainFont(const juce::FontOptions& font);
+    void setPostfixFont(const juce::FontOptions& font);
+
+    void focusGained(juce::Component::FocusChangeType changeType) override;
+    void focusLost(juce::Component::FocusChangeType changeType) override;
+
 private:
     std::string prefix;
     std::string postfix;
@@ -39,9 +34,8 @@ private:
     bool typeNegative;
     juce::StringArray choices;
 
-    // === Private Helper =====================================================
-    void sliderValueChanged(juce::Slider*) override;
+    void sliderValueChanged(juce::Slider* slider) override;
     void onInputReturnKey();
-    double convertToSliderValue(const juce::String&);
-    std::string getSliderValueAsString(juce::Slider*);
+    double convertToSliderValue(const juce::String& string);
+    std::string getSliderValueAsString(juce::Slider* slider);
 };

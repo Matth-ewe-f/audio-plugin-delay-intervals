@@ -2,7 +2,6 @@
 #include <format>
 #include "SliderLabel.h"
 
-// === Lifecycle ==============================================================
 SliderLabel::SliderLabel() :
     prefix(""), postfix(""), maxDecimals(0), showPlus(false),
     typeNegative(false)
@@ -12,14 +11,12 @@ SliderLabel::SliderLabel() :
     onReturnKey = [this]{ onInputReturnKey(); };
 }
 
-// === Listener ===============================================================
 void SliderLabel::listenTo(juce::Slider* slider)
 {
     attachedSlider = slider;
     slider->addListener(this);
 }
 
-// === Text Manipulation ======================================================
 void SliderLabel::setPrefix(std::string s)
 {
     prefix = s;
@@ -37,8 +34,10 @@ void SliderLabel::updateText(juce::Slider* slider)
     {
         value = '+' + value;
     }
+
     setFont(mainFont);
     setText(prefix + value, juce::dontSendNotification);
+
     moveCaretToEnd();
     setFont(postfixFont);
     insertTextAtCaret(postfix);
@@ -49,9 +48,9 @@ void SliderLabel::setTypeNegativeValues(bool typeNegativeValues)
     typeNegative = typeNegativeValues;
 }
 
-void SliderLabel::setMaxDecimals(int decimals)
+void SliderLabel::setMaxDecimals(int max)
 {
-    maxDecimals = decimals;
+    maxDecimals = max;
 }
 
 void SliderLabel::setShowPlusForPositive(bool show)
@@ -59,12 +58,12 @@ void SliderLabel::setShowPlusForPositive(bool show)
     showPlus = show;
 }
 
-void SliderLabel::setChoicesArrayForChoiceParameter(juce::StringArray arr)
+void SliderLabel::setChoicesArrayForChoiceParameter
+    (juce::StringArray choicesArray)
 {
-    choices = arr;
+    choices = choicesArray;
 }
 
-// === Font Setters ===========================================================
 void SliderLabel::setMainFont(const juce::FontOptions& font)
 {
     mainFont = font;
@@ -75,7 +74,6 @@ void SliderLabel::setPostfixFont(const juce::FontOptions& font)
     postfixFont = font;
 }
 
-// === Focus Functions ========================================================
 void SliderLabel::focusGained(juce::Component::FocusChangeType changeType)
 {
     setFont(mainFont);
@@ -89,7 +87,6 @@ void SliderLabel::focusLost(juce::Component::FocusChangeType changeType)
     updateText(attachedSlider);
 }
 
-// === Private ================================================================
 void SliderLabel::sliderValueChanged(juce::Slider* slider)
 {
     updateText(slider);

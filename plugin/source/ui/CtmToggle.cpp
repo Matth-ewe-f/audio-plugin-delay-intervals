@@ -1,19 +1,19 @@
 #include "CtmToggle.h"
 #include "CtmLookAndFeel.h"
 
-// === Lifecycle ==============================================================
 CtmToggle::CtmToggle()
     : colorOverriden(false), colorGradient(false), toggledText(""),
-    untoggledText(""), fontSize(-1), alwaysUp(false), untoggledColor(false)
+    untoggledText(""), fontSize(-1), alwaysUp(false), useUntoggledColor(false)
  { }
 
 void CtmToggle::parentHierarchyChanged()
 {
     if (!colorOverriden && !colorGradient)
+    {
         fillColor = findColour(CtmColourIds::toggledColourId);
+    }
 }
 
-// === Setters ================================================================
 void CtmToggle::setText(std::string s)
 {
     toggledText = s;
@@ -54,13 +54,12 @@ void CtmToggle::setDisplayAlwaysUp(bool isAlwaysUp)
     repaint();
 }
 
-void CtmToggle::setColorAsUntoggled(bool showUntoggled)
+void CtmToggle::setColorAsUntoggled(bool showAsUntoggled)
 {
-    untoggledColor = showUntoggled;
+    useUntoggledColor = showAsUntoggled;
     repaint();
 }
 
-// === Graphics ===============================================================
 // warning can safely be ignored - float comparison involving no arithmetic
 // is perfectly safe
 #pragma GCC diagnostic push
@@ -69,6 +68,7 @@ void CtmToggle::paintButton(juce::Graphics& g, bool hover, bool click)
 {
     juce::ignoreUnused(hover);
     bool toggle = getToggleState();
+
     // get the bounds of the button
     juce::Rectangle<int> bounds = getLocalBounds();
     int x = bounds.getX() + 1;
@@ -76,42 +76,57 @@ void CtmToggle::paintButton(juce::Graphics& g, bool hover, bool click)
     int w = bounds.getWidth() - 2;
     int h = bounds.getHeight() - 2;
     int r = 4 + ((h - 20) / 8);
+
     // draw the button background
-    if (!(untoggledColor) && (toggle || alwaysUp))
+    if (!useUntoggledColor && (toggle || alwaysUp))
     {
         if (colorGradient)
         {
-            g.setGradientFill(juce::ColourGradient(
-                fillColor, x, y, gradColor, x, y + h, false
-            ));
+            g.setGradientFill(juce::ColourGradient(fillColor, x, y, gradColor,
+                x, y + h, false));
         }
         else
+        {
             g.setColour(fillColor);
+        }
     }
     else
+    {
         g.setColour(findColour(CtmColourIds::untoggledColourId));
+    }
+
     g.fillRoundedRectangle(x, y, w, h, r);
+
     // draw the highlights on the top of the button
     juce::Colour light;
     if (click || (!toggle && !alwaysUp))
+    {
         light = getShadowColor();
+    }
     else 
+    {
         light = getHighlightColor();
+    }
     g.setColour(light);
     g.drawRoundedRectangle(x, y + 1, w, h - 1, r, 1);
+
     light = light.withMultipliedAlpha(0.7f);
     g.setColour(light);
     g.drawRoundedRectangle(x, y + 2, w, h - 3, r, 1);
+
     // draw the outline of the button
     g.setColour(findColour(CtmColourIds::darkOutlineColourId));
     g.drawRoundedRectangle(x, y, w, h, r, 1);
+
     // draw the button text
     g.setColour(juce::Colours::white);
     g.setFont(fontSize == -1 ? (h / 2) + 2 : fontSize);
-    auto justify = juce::Justification::centred;
+
     std::string s = toggle ? toggledText : untoggledText;
     int textY = !(toggle || alwaysUp) || (alwaysUp && click) ? y + 4 : y + 3;
+    auto justify = juce::Justification::centred;
     g.drawFittedText(s, x + 2, textY, w - 4, h - 8, justify, 3, 0.8f);
+
     // darken the button it it's been clicked
     if (click)
     {
@@ -121,14 +136,17 @@ void CtmToggle::paintButton(juce::Graphics& g, bool hover, bool click)
 }
 #pragma GCC diagnostic pop
 
-// === Private Helper =========================================================
 juce::Colour CtmToggle::getHighlightColor()
 {
     juce::Colour outline = findColour(CtmColourIds::brightOutlineColourId);
     if (colorOverriden && fillColor.getLightness() < 0.3f)
+    {
         return outline.withAlpha(0.2f);
+    }
     else
+    {
         return outline.withAlpha(0.3f);
+    }
 }
 
 juce::Colour CtmToggle::getShadowColor()

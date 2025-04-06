@@ -4,6 +4,15 @@
 class CtmComboBox : public juce::ComboBox
 {
 public:
-    void mouseEnter(const juce::MouseEvent&) override { repaint(); }
-    void mouseExit(const juce::MouseEvent&) override { repaint(); }
+
+    void mouseEnter(const juce::MouseEvent&) override
+    { 
+        repaint();
+    }
+
+    void mouseExit(const juce::MouseEvent&) override
+    {
+        repaint(); 
+    }
+
 };
