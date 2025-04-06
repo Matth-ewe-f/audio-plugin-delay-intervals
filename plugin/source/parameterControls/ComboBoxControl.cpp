@@ -1,4 +1,6 @@
 #include "ComboBoxControl.h"
+typedef juce::AudioProcessorValueTreeState::ComboBoxAttachment
+    ComboBoxAttachment;
 
 ComboBoxControl::ComboBoxControl() : parameterId(""), bounds(0, 0, 0, 0)
 {
@@ -16,6 +18,7 @@ void ComboBoxControl::setBounds(juce::Rectangle<int> rect)
 void ComboBoxControl::setBounds(int x, int y, int width, int height)
 {
     bounds = juce::Rectangle<int>(x, y, width, height);
+
     if (title.getText().compare("") != 0)
     {
         title.setBounds(x, y, width, 16);
@@ -29,18 +32,20 @@ void ComboBoxControl::setBounds(int x, int y, int width, int height)
 }
 
 void ComboBoxControl::attachToParameter
-(juce::AudioProcessorValueTreeState* treeState, std::string paramId)
+    (juce::AudioProcessorValueTreeState* treeState, std::string newParam)
 {
-    // delete the old attachment
     ComboBoxAttachment* old = attachment.release();
     if (old != nullptr)
+    {
         delete old;
-    // attach to the new parameter
-    parameterId = paramId;
+    }
+    
     comboBox.clear();
-    auto* param = treeState->getParameter(paramId);
+    auto* param = treeState->getParameter(newParam);
     comboBox.addItemList(param->getAllValueStrings(), 1);
-    attachment.reset(new ComboBoxAttachment(*treeState, paramId, comboBox));
+    
+    attachment.reset(new ComboBoxAttachment(*treeState, newParam, comboBox));
+    parameterId = newParam;
 }
 
 void ComboBoxControl::setTitleText(const std::string& str)

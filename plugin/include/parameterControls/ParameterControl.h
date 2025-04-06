@@ -3,8 +3,6 @@
 #include "CtmSlider.h"
 #include "SliderLabel.h"
 
-using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
-
 class ParameterControl
 {
 public:
@@ -12,22 +10,23 @@ public:
     CtmSlider slider;
     SliderLabel label;
     juce::Label title;
-    std::unique_ptr<SliderAttachment> attachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
+        attachment;
 
-    // === Lifecycle ==========================================================
     ParameterControl();
     ~ParameterControl();
 
-    // === Settings ===========================================================
-    void setBounds(juce::Rectangle<int>);
-    void setBounds(int x, int y, int width, int height);
     inline juce::Rectangle<int> getBounds() { return bounds; }
-    void attachToParameter
-    (juce::AudioProcessorValueTreeState*, std::string);
-    void setSliderStyle(juce::Slider::SliderStyle);
-    void setShowLabel(bool = true);
-    void setTitleText(std::string);
-    void setTightText(bool = true);
+    void setBounds(juce::Rectangle<int> bounds);
+    void setBounds(int x, int y, int width, int height);
+
+    void attachToParameter(juce::AudioProcessorValueTreeState* state,
+        std::string newParam);
+    
+    void setSliderStyle(juce::Slider::SliderStyle style);
+    void setShowLabel(bool show = true);
+    void setTitleText(std::string titleText);
+    void setTightText(bool tight = true);
 
 private:
     juce::Rectangle<int> bounds;
