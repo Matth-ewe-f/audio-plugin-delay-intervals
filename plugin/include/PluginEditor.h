@@ -13,62 +13,22 @@ class PluginEditor final :
     private juce::Timer
 {
 public:
-    // === Lifecycle ==========================================================
-    explicit PluginEditor (PluginProcessor&);
+    explicit PluginEditor(PluginProcessor& p);
     ~PluginEditor() override;
 
-    // === Graphics ===========================================================
-    void paint(juce::Graphics&) override;
-    void paintOverChildren(juce::Graphics&) override;
+    void paint(juce::Graphics& g) override;
+    void paintOverChildren(juce::Graphics& g) override;
     void resized() override;
 
-    // === Superclass Functions ===============================================
-    void parameterChanged(const juce::String&, float) override;
+    void parameterChanged(const juce::String& name, float value) override;
+
     void handleAsyncUpdate() override;
     void timerCallback() override;
 
 private:
-    // === Static Constants ===================================================
     static constexpr int leftDelayAmpsLength = 16;
     static constexpr int rightDelayAmpsLength = 16;
-    // === Variables ==========================================================
-    PluginProcessor& processorRef;
-    CtmLookAndFeel lookAndFeel;
-    // === Global Controls (Left Side) ========================================
-    ParameterControl delayTime;
-    ComboBoxControl delayTimeSync;
-    juce::Label delayTimeSyncLabel;
-    juce::Colour normalTextColor;
-    ParameterToggle noTempoSync;
-    ParameterToggle tempoSync;
-    ParameterControl numIntervals;
-    ParameterToggle loopButton;
-    // === Channel Controls ===================================================
-    ParameterControl leftFilterLow;
-    ParameterControl leftFilterHigh;
-    ParameterControl leftFilterMix;
-    ParameterControl rightFilterLow;
-    ParameterControl rightFilterHigh;
-    ParameterControl rightFilterMix;
-    ParameterControl leftDelayAmps[leftDelayAmpsLength];
-    ParameterControl rightDelayAmps[rightDelayAmpsLength];
-    CtmToggle resetLeft;
-    CtmToggle resetRight;
-    CtmToggle matchLeft;
-    CtmToggle matchRight;
-    // === Global Controls (Right Side) =======================================
-    ParameterToggle linkAmps;
-    ParameterToggle linkFilters;
-    ParameterControl falloff;
-    ParameterControl wetDry;
-    // === Info for Drawing Controls ==========================================
-    bool tempoSyncOn;
-    int tempoSyncNoteIndex;
-    int numDelayAmps;
-    float wetRatio;
-    float autoFalloffRate;
 
-    // === Layout Constants ===================================================
     static const int col1Width;
     static const int col1KnobW;
     static const int col1KnobH;
@@ -77,20 +37,24 @@ private:
     static const int syncTogglePadX;
     static const int syncTogglePadY;
     static const int loopToggleW;
+
     static const int col2Width;
     static const int col2Margin;
     static const int delayAmpsAreaHeight;
     static const int delayAmpsMarginX;
     static const int delayAmpsMarginY;
+
     static const int filterY;
     static const int filterMargin;
     static const int filterKnobW;
     static const int filterKnobH;
     static const int filterMixMargin;
+    
     static const int col2ButtonW;
     static const int col2ButtonH;
     static const int col2ButtonPad;
     static const int col2ButtonMargin;
+
     static const int col3Width;
     static const int col3KnobW;
     static const int col3KnobH;
@@ -102,36 +66,77 @@ private:
     static const int height;
     static const int paddingY;
 
-    // === Initialization Functions ===========================================
+    PluginProcessor& processorRef;
+    CtmLookAndFeel lookAndFeel;
+    
+    ParameterControl delayTime;
+    ComboBoxControl delayTimeSync;
+    juce::Label delayTimeSyncLabel;
+    juce::Colour normalTextColor;
+    ParameterToggle noTempoSync;
+    ParameterToggle tempoSync;
+    ParameterControl numIntervals;
+    ParameterToggle loopButton;
+    
+    ParameterControl leftFilterLow;
+    ParameterControl leftFilterHigh;
+    ParameterControl leftFilterMix;
+    ParameterControl rightFilterLow;
+    ParameterControl rightFilterHigh;
+    ParameterControl rightFilterMix;
+
+    ParameterControl leftDelayAmps[leftDelayAmpsLength];
+    ParameterControl rightDelayAmps[rightDelayAmpsLength];
+    CtmToggle resetLeft;
+    CtmToggle resetRight;
+    CtmToggle matchLeft;
+    CtmToggle matchRight;
+    
+    ParameterToggle linkAmps;
+    ParameterToggle linkFilters;
+    ParameterControl falloff;
+    ParameterControl wetDry;
+    
+    bool tempoSyncOn;
+    int tempoSyncNoteIndex;
+    int numDelayAmps;
+    float wetRatio;
+    float autoFalloffRate;
+
+    void initializeParameters();
+
     void setupLeftSideGlobals();
-    void setupChannels();
+    void setupChannelIntervals();
+    void setupChannelFilters();
+    void setupChannelButtons();
     void setupRightSideGlobals();
 
-    // === Layout Functions ===================================================
     void layoutLeftSideGlobals();
+    void layoutChannelIntervals();
     void layoutChannelFilters();
-    void layoutDelayAmps();
+    void layoutChannelButtons();
     void layoutRightSideGlobals();
 
-    // == Drawing Functions ===================================================
-    void drawLeftSideGlobals(juce::Graphics&);
-    void drawChannels(juce::Graphics&);
-    void drawChannelLabels(juce::Graphics&);
-    void drawDelayAmpBeatMarkers(juce::Graphics&);
-    void drawRightSideGlobals(juce::Graphics&);
+    void drawLeftSideGlobals(juce::Graphics& g);
+    void drawChannelIntervals(juce::Graphics& g);
+    void drawChannelFilters(juce::Graphics& g);
+    void drawChannelButtons(juce::Graphics& g);
+    void drawChannelLabels(juce::Graphics& g);
+    void drawDelayAmpBeatMarkers(juce::Graphics& g);
+    void drawRightSideGlobals(juce::Graphics& g);
 
-    // === Helper Functions ===================================================
-    void addParameterControl(ParameterControl*);
-    void addComboBoxControl(ComboBoxControl*);
-    void setNoteValueDelayLabel(int index);
+    void addParameterControl(ParameterControl* control);
+    void addComboBoxControl(ComboBoxControl* control);
+
+    void setNoteValueDelayLabel();
     void setMillisecondsDisplay(int milliseconds);
-    void setHorizontalGradient
-    (juce::Graphics&, juce::Colour c1, int x1, juce::Colour c2, int x2);
-    void setVerticalGradient
-    (juce::Graphics&, juce::Colour c1, int y1, juce::Colour c2, int y2);
-    void setRadialGradient
-    (juce::Graphics&, juce::Colour c1, int cx, int cy, juce::Colour c2, int r,
-    int innerR);
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginEditor)
+    void setHorizontalGradient(juce::Graphics& g, juce::Colour c1, int x1,
+        juce::Colour c2, int x2);
+    void setVerticalGradient(juce::Graphics& g, juce::Colour c1, int y1,
+        juce::Colour c2, int y2);
+    void setRadialGradient(juce::Graphics& g, juce::Colour c1, int cx, int cy,
+        juce::Colour c2, int r, int innerR);
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };
