@@ -4,8 +4,8 @@
 #include "PluginEditor.h"
 #include "ParameterFactory.h"
 
-// === Constants ==============================================================
 const float PluginProcessor::maxDelayTime = 250;
+
 const NoteValue PluginProcessor::noteValues[numNoteValues] = {
 	{ "16th triplet", 0.0417f },
 	{ "16th", 0.0625f },
@@ -15,42 +15,28 @@ const NoteValue PluginProcessor::noteValues[numNoteValues] = {
 	{ "8th dotted", 0.1875f }
 };
 
-// === Lifecycle ==============================================================
-PluginProcessor::PluginProcessor()
-	: AudioProcessor(BusesProperties()
-#if !JucePlugin_IsMidiEffect
-#if !JucePlugin_IsSynth
-		.withInput("Input", juce::AudioChannelSet::stereo(), true)
-#endif
-		.withOutput("Output", juce::AudioChannelSet::stereo(), true)
-#endif
-	),
+PluginProcessor::PluginProcessor() :
+	AudioProcessor(createBusesProperties()),
 	tree(*this, nullptr, "PARAMETERS", createParameters()),
 	lastSampleRate(44100),
 	lastBpm(-1)
 {
-#if PERFETTO
-    MelatoninPerfetto::get().beginSession();
-#endif
-	std::string lHigh = "left-high-pass";
-	std::string lLow = "left-low-pass";
-	std::string lMix = "left-filter-mix";
-	std::string rHigh = "right-high-pass";
-	std::string rLow = "right-low-pass";
-	std::string rMix = "right-filter-mix";
 	for (int i = 0;i < maxIntervals;i++)
 	{
 		leftAmps[i].listenTo(&tree, getIdForLeftIntervalAmp(i));
 		rightAmps[i].listenTo(&tree, getIdForRightIntervalAmp(i));
-		leftFilters[i].attachToParameters(&tree, lHigh, lLow, lMix);
-		rightFilters[i].attachToParameters(&tree, rHigh, rLow, rMix);
+
+		leftFilters[i].attachToParameters(&tree, "left-high-pass",
+			"left-low-pass", "left-filter-mix");
+		rightFilters[i].attachToParameters(&tree, "right-high-pass",
+			"right-low-pass", "right-filter-mix");
 	}
-	lastDelay = getDelaySamples();
-	lastIntervals = getCurrentNumIntervals();
-	lastBlockFadeOut = false;
-	lastWet = *tree.getRawParameterValue("wet") / 100;
-	lastFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
-	lastLoop = *tree.getRawParameterValue("loop") >= 1;
+
+	updateParametersOnReset();
+
+#if PERFETTO
+	MelatoninPerfetto::get().beginSession();
+#endif
 }
 
 PluginProcessor::~PluginProcessor()
@@ -64,83 +50,72 @@ juce::AudioProcessorValueTreeState::ParameterLayout
 PluginProcessor::createParameters()
 {
 	juce::AudioProcessorValueTreeState::ParameterLayout parameters;
-	parameters.add(ParameterFactory::createTimeParameter(
-		"delay-time", "Delay Time", 20, maxDelayTime, 1, 100
-	));
-	juce::StringArray options;
+
+	parameters.add(ParameterFactory::createTimeParameter("delay-time",
+		"Delay Time", 20, maxDelayTime, 1, 100));
+	
+	juce::StringArray noteOptions;
 	for (size_t i = 0;i < numNoteValues;i++)
-		options.add(noteValues[i].name);
-	parameters.add(ParameterFactory::createChoiceParameter(
-		"delay-time-sync", "Delay Time (Rhythmic)", options, 4
-	));
-	parameters.add(ParameterFactory::createBoolParameter(
-		"tempo-sync", "Tempo Sync", "ON", "OFF", 0
-	));
-	parameters.add(ParameterFactory::createIntParameter(
-		"num-intervals", "Intervals", 8, 16, 8
-	));
-	parameters.add(ParameterFactory::createBoolParameter(
-		"loop", "Loop", "ON", "OFF", 0
-	));
-	parameters.add(ParameterFactory::createBoolParameter(
-		"delays-linked", "Delays Mirrored", "ON", "OFF", 0
-	));
-	parameters.add(ParameterFactory::createBoolParameter(
-		"filters-linked", "Filters Mirrored", "ON", "OFF", 0
-	));
+	{
+		noteOptions.add(noteValues[i].name);
+	}
+
+	parameters.add(ParameterFactory::createChoiceParameter("delay-time-sync",
+		"Delay Time (Rhythmic)", noteOptions, 4));
+	parameters.add(ParameterFactory::createBoolParameter("tempo-sync",
+		"Tempo Sync", "ON", "OFF", 0));
+
+	parameters.add(ParameterFactory::createIntParameter("num-intervals",
+		"Intervals", 8, 16, 8));
+	parameters.add(ParameterFactory::createBoolParameter("loop", "Loop", "ON",
+		"OFF", 0));
+
+	parameters.add(ParameterFactory::createBoolParameter("delays-linked",
+		"Delays Mirrored", "ON", "OFF", 0));
+	parameters.add(ParameterFactory::createBoolParameter("filters-linked",
+		"Filters Mirrored", "ON", "OFF", 0));
+
+	parameters.add(ParameterFactory::createPercentageParameter("wet",
+		"Wet Mix", 100));
+	parameters.add(ParameterFactory::createPercentageParameter("falloff",
+		"Auto-Falloff", 0));
+
+	parameters.add(ParameterFactory::createFreqParameter("left-high-pass",
+		"Filter Left Low", 20));
+	parameters.add(ParameterFactory::createFreqParameter("left-low-pass",
+		"Filter Left High", 20000));
 	parameters.add(ParameterFactory::createPercentageParameter(
-		"wet", "Wet Mix", 100
-	));
+		"left-filter-mix", "Filter Left Mix", 100));
+	parameters.add(ParameterFactory::createFreqParameter("right-high-pass",
+		"Filter Right Low", 20));
+	parameters.add(ParameterFactory::createFreqParameter("right-low-pass",
+		"Filter Right High", 20000));
 	parameters.add(ParameterFactory::createPercentageParameter(
-		"falloff", "Auto-Falloff", 0
-	));
-	parameters.add(ParameterFactory::createFreqParameter(
-		"left-high-pass", "Filter Left Low", 20
-	));
-	parameters.add(ParameterFactory::createFreqParameter(
-		"left-low-pass", "Filter Left High", 20000
-	));
-	parameters.add(ParameterFactory::createPercentageParameter(
-		"left-filter-mix", "Filter Left Mix", 100
-	));
-	parameters.add(ParameterFactory::createFreqParameter(
-		"right-high-pass", "Filter Right Low", 20
-	));
-	parameters.add(ParameterFactory::createFreqParameter(
-		"right-low-pass", "Filter Right High", 20000
-	));
-	parameters.add(ParameterFactory::createPercentageParameter(
-		"right-filter-mix", "Filter Right Mix", 100
-	));
-	// delay amplitudes
+		"right-filter-mix", "Filter Right Mix", 100));
+		
 	for (int i = 0;i < maxIntervals;i++)
 	{
 		std::string leftName;
 		std::string rightName;
-		float lDefault;
-		float rDefault;
+		float lDefault = i == 0 ? 1 : 0;
+		float rDefault = i == 0 ? 1 : 0;
+
 		if (i == 0)
 		{
 			leftName = "Pre-Repeat Amplitude L";
 			rightName = "Pre-Repeat Amplitude R";
-			lDefault = 1;
-			rDefault = 1;
 		}
 		else 
 		{
+			std::string number = std::to_string(i);
 			if (i < 10)
 			{
-				leftName = "Repeat 0" + std::to_string(i) + " Amplitude L";
-				rightName = "Repeat 0" + std::to_string(i) + " Amplitude R";
+				number = "0" + number;
 			}
-			else
-			{
-				leftName = "Repeat " + std::to_string(i) + " Amplitude L";
-				rightName = "Repeat " + std::to_string(i) + " Amplitude R";
-			}
-			lDefault = 0;
-			rDefault = 0;
+			leftName = "Repeat " + number + " Amplitude L";
+			rightName = "Repeat " + number + " Amplitude R";
 		}
+
 		parameters.add(ParameterFactory::createDelayAmpParameter(
 			getIdForLeftIntervalAmp(i), leftName, lDefault
 		));
@@ -148,10 +123,22 @@ PluginProcessor::createParameters()
 			getIdForRightIntervalAmp(i), rightName, rDefault
 		));
 	}
+	
 	return parameters;
 }
 
-// === Plugin Information =====================================================
+juce::AudioProcessor::BusesProperties PluginProcessor::createBusesProperties()
+{
+	juce::AudioProcessor::BusesProperties props;
+#if !JucePlugin_IsMidiEffect
+#if !JucePlugin_IsSynth
+	props = props.withInput("Input", juce::AudioChannelSet::stereo(), true);
+#endif
+	props = props.withOutput("Output", juce::AudioChannelSet::stereo(), true);
+#endif
+	return props;
+}
+
 bool PluginProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 {
 #if JucePlugin_IsMidiEffect
@@ -159,216 +146,274 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 	return true;
 #else
 	if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+	{
 		return false;
+	}
 
 #if !JucePlugin_IsSynth
-	// Check if the input matches the output
 	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+	{
 		return false;
+	}
 #endif
 	return true;
 #endif
 }
 
-// === Process Audio ==========================================================
+double PluginProcessor::getTailLengthSeconds() const
+{
+	return maxIntervals * maxDelayTime / 1000;
+}
+
+float PluginProcessor::getSecondsForNoteValue(int index)
+{
+	if (index >= static_cast<int>(numNoteValues) || index < 0 || lastBpm < 0)
+	{
+		return 0;
+	}
+	return (noteValues[index].proportion / static_cast<float>(lastBpm)) * 240;
+}
+
 void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-	lastSampleRate = sampleRate;
-	// prepare the filters
 	juce::dsp::ProcessSpec spec;
 	spec.sampleRate = sampleRate;
-	spec.maximumBlockSize = (unsigned) samplesPerBlock;
-	spec.numChannels = (unsigned) getTotalNumOutputChannels();
+	spec.maximumBlockSize = static_cast<unsigned>(samplesPerBlock);
+	spec.numChannels = static_cast<unsigned>(getTotalNumOutputChannels());
 	for (int i = 0;i < maxIntervals;i++)
 	{
 		leftFilters[i].prepare(spec);
 		rightFilters[i].prepare(spec);
 	}
-	// prepare the delay buffers
+
 	leftBuffer.resize(sampleRate, (maxDelayTime / 1000) * (maxIntervals + 1));
 	rightBuffer.resize(sampleRate, (maxDelayTime / 1000) * (maxIntervals + 1));
-	// prepare tracking of smoothed values
-	lastDelay = getDelaySamples();
-	lastIntervals = getCurrentNumIntervals();
-	lastBlockFadeOut = false;
-	lastWet = *tree.getRawParameterValue("wet") / 100;
-	lastFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
-	lastLoop = *tree.getRawParameterValue("loop") >= 1;
+	tempBuffer.resize((size_t) samplesPerBlock, 0.0f);
+		
+	lastSampleRate = sampleRate;
+	updateParametersOnReset();
+
 	lastAmpsLinked = *tree.getRawParameterValue("delays-linked") >= 1;
 	lastFiltersLinked = *tree.getRawParameterValue("filters-linked") >= 1;
-	tempBuffer.resize((size_t) samplesPerBlock, 0.0f);
 }
 
 void PluginProcessor::releaseResources() { }
 
 void PluginProcessor::processBlock
-(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages)
+(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
 	TRACE_DSP();
-	juce::ignoreUnused(midiMessages); // not a midi plugin
-	// get the audio playhead for tempo synched delay
-	juce::AudioPlayHead* playhead = getPlayHead();
-	if (playhead && playhead->getPosition().hasValue())
-		lastBpm = playhead->getPosition()->getBpm().orFallback(120.0);
-	// setup channels
+	juce::ignoreUnused(midiMessages);
+	
 	int numInputChannels = getTotalNumInputChannels();
 	int numOutputChannels = getTotalNumOutputChannels();
 	for (int i = numInputChannels;i < numOutputChannels;i++)
+	{
 		buffer.clear(i, 0, buffer.getNumSamples());
-	// handle parameter linking
-	bool ampsLinked = *tree.getRawParameterValue("delays-linked") >= 1;
-	if (ampsLinked && !lastAmpsLinked)
-		linkDelays();
-	else if (!ampsLinked && lastAmpsLinked)
-		unlinkDelays();
-	lastAmpsLinked = ampsLinked;
-	bool filtersLinked = *tree.getRawParameterValue("filters-linked") >= 1;
-	if (filtersLinked && !lastFiltersLinked)
-		linkFilters();
-	else if (!filtersLinked && lastFiltersLinked)
-		unlinkFilters();
-	lastFiltersLinked = filtersLinked;
-	// get parameters by which to process the audio
-	size_t numSamples = (size_t) buffer.getNumSamples();
-	size_t curDelay = getDelaySamples();
-	bool delayChanged = curDelay != lastDelay && lastDelay != LONG_MAX;
-	if (curDelay > (maxDelayTime / 1000) * lastSampleRate)
-	{
-		delayChanged = true; // delay value is too long, so fade out signal
-		curDelay = (size_t) ((maxDelayTime / 1000) * lastSampleRate);
 	}
-	size_t delay = delayChanged ? lastDelay : curDelay;
-	size_t curIntervals = getCurrentNumIntervals();
-	bool intervalsChanged = curIntervals != lastIntervals;
-	size_t intervals = intervalsChanged ? lastIntervals : curIntervals;
-	bool fadeOut = delayChanged || intervalsChanged;
-	float curWet = *tree.getRawParameterValue("wet") / 100;
-	float curFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
-	bool loop = *tree.getRawParameterValue("loop") >= 1;
-	// process each channel
-	for (int channel = 0;channel < numInputChannels;channel++)
-	{
-		// get parameters/objects to use when processing the channel
-		float* channelData = buffer.getWritePointer(channel);
-		CircularBuffer* delayBuf = channel == 0 ? &leftBuffer : &rightBuffer;
-		DelayAmp* amps = channel == 0 ? leftAmps : rightAmps;
-		Filter* filters = channel == 0 ? leftFilters : rightFilters;
-		// add dry signal to temporary buffer, will add to delay buffer later
-		for (size_t i = 0;i < numSamples;i++)
-			tempBuffer[i] = channelData[i];
-		// scale the dry signal by the wet/dry and its amplitude slider
-		float dryAmp;
-		float dryAmpStep;
-		float dryAmpStart = amps[0].getLastValue();
-		float dryAmpEnd = amps[0].getCurrentValue();
-		if (juce::approximatelyEqual(dryAmpStart, dryAmpEnd))
-		{
-			dryAmp = dryAmpStart;
-			dryAmpStep = (dryAmpEnd - dryAmpStart) / numSamples;
-		}
-		else
-		{
-			dryAmp = dryAmpStart;
-			dryAmpStep = 0;
-		}
-		for (size_t i = 0;i < numSamples;i++)
-		{
-			dryAmp += dryAmpStep;
-			channelData[i] *= dryAmp;
-		}
-		// if enabled, add looped signal to output and temporary buffer for
-		// adding back to the delay buffer
-		if (loop || lastLoop)
-		{
-			size_t loopDelay = delay * intervals - numSamples;
-			delayBuf->applyGainToSamples(
-				loopDelay, numSamples, lastFalloff, curFalloff
-			);
-			delayBuf->applyFilterToSamples(loopDelay, numSamples, &filters[0]);
-			dryAmpStart *= lastWet;
-			dryAmpEnd *= curWet;
-			if (!lastLoop)
-				dryAmpStart = 0;
-			else if (!loop || fadeOut)
-				dryAmpEnd = 0;
-			delayBuf->sumWithSamplesRamped(
-				loopDelay, channelData, numSamples, dryAmpStart, dryAmpEnd
-			);
-			float* tmp = tempBuffer.data();
-			float feedbackStart = lastLoop ? 1 : 0;
-			float feedbackEnd = loop ? 1 : 0;
-			delayBuf->sumWithSamplesRamped(
-				loopDelay, tmp, numSamples, feedbackStart, feedbackEnd
-			);
-		}
-		// add dry (and looped, if enabled) signal to the delay buffer
-		if (!lastBlockFadeOut)
-			delayBuf->addSamples(tempBuffer.data(), numSamples);
-		else if (!fadeOut)
-			delayBuf->addSamplesRamped(tempBuffer.data(), numSamples);
-		// skip wet signal if delay is currently changing
-		if (fadeOut && lastBlockFadeOut)
-			continue;
-		// get wet signal scaled by amplitude sliders and falloff value
-		for (size_t i = 0;i < numSamples;i++)
-			tempBuffer[i] = 0;
-		for (size_t i = intervals - 1;i > 0;i--)
-		{
-			size_t d = delay * i;
-			delayBuf->applyGainToSamples(
-				d, numSamples, lastFalloff, curFalloff
-			);
-			delayBuf->applyFilterToSamples(d, numSamples, &filters[i]);
-			float* data = tempBuffer.data();
-			if (amps[i].hasNewValue())
-			{
-				float g1 = amps[i].getLastValue();
-				float g2 = amps[i].getCurrentValue();
-				delayBuf->sumWithSamplesRamped(d, data, numSamples, g1, g2);
-			}
-			else
-			{
-				float gain = amps[i].getCurrentValue();
-				delayBuf->sumWithSamples(d, data, numSamples, gain);
-			}
-		}
-		// scale wet signal by wet param, fade out if delay time has started
-		// changing on this block, and add to output signal
-		float wet = lastWet;
-		float wetStep;
-		if (juce::approximatelyEqual(lastWet, curWet))
-			wetStep = 0;
-		else
-			wetStep = (curWet - lastWet) / numSamples;
-		float fade = 1;
-		float fadeStep = 1.0f / numSamples;
-		for (size_t i = 0;i < numSamples;i++)
-		{
-			fade -= fadeStep;
-			wet += wetStep;
-			tempBuffer[i] *= wet * (fadeOut ? fade : 1);
-			channelData[i] += tempBuffer[i];
-		}
-		// clear buffer if the delay time has changed
-		if (fadeOut)
-		{
-			delayBuf->clear();
-			for (size_t i = 0;i < maxIntervals;i++)
-			{
-				filters[i].reset();
-			}
-		}
-	}
-	// save parameters to compare with next block
-	lastDelay = curDelay;
-	lastIntervals = curIntervals;
-	lastBlockFadeOut = fadeOut;
-	lastWet = curWet;
-	lastFalloff = curFalloff;
-	lastLoop = loop;
+	
+	numSamples = static_cast<size_t>(buffer.getNumSamples());
+	
+	handleTempoSync();
+	handleParameterLinking();
+	updateCurrentBlockParameters();
+
+	float* leftAudio = buffer.getWritePointer(0);
+	processChannel(leftAudio, &leftBuffer, leftAmps, leftFilters);
+	float* rightAudio = buffer.getWritePointer(1);
+	processChannel(rightAudio, &rightBuffer, rightAmps, rightFilters);
+
+	updateLastBlockParameters();
 }
 
-// === Operations =========================================================
+void PluginProcessor::updateCurrentBlockParameters()
+{
+	currentDelay = getDelaySamples();
+	currentNumIntervals = getCurrentNumIntervals();
+
+	bool delayChanged = currentDelay != lastBlockDelay;
+	bool intervalsChanged = currentNumIntervals != lastBlockNumIntervals;
+	fadeOut = delayChanged || intervalsChanged;
+
+	currentWet = *tree.getRawParameterValue("wet") / 100;
+	currentFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
+	loop = *tree.getRawParameterValue("loop") >= 1;
+}
+
+void PluginProcessor::updateLastBlockParameters()
+{
+	lastBlockDelay = currentDelay;
+	lastBlockNumIntervals = currentNumIntervals;
+	lastBlockFadeOut = fadeOut;
+	lastBlockWet = currentWet;
+	lastBlockFalloff = currentFalloff;
+	lastBlockLoop = loop;
+}
+
+void PluginProcessor::updateParametersOnReset()
+{
+	updateCurrentBlockParameters();
+	fadeOut = false;
+	updateLastBlockParameters();
+}
+
+void PluginProcessor::handleTempoSync()
+{
+	juce::AudioPlayHead* playhead = getPlayHead();
+	if (playhead && playhead->getPosition().hasValue())
+	{
+		lastBpm = playhead->getPosition()->getBpm().orFallback(120.0);
+	}
+}
+
+void PluginProcessor::handleParameterLinking()
+{
+	bool ampsLinked = *tree.getRawParameterValue("delays-linked") >= 1;
+	if (ampsLinked && !lastAmpsLinked)
+	{
+		linkDelays();
+	}
+	else if (!ampsLinked && lastAmpsLinked)
+	{
+		unlinkDelays();
+	}
+	lastAmpsLinked = ampsLinked;
+
+	bool filtersLinked = *tree.getRawParameterValue("filters-linked") >= 1;
+	if (filtersLinked && !lastFiltersLinked)
+	{
+		linkFilters();
+	}
+	else if (!filtersLinked && lastFiltersLinked)
+	{
+		unlinkFilters();
+	}
+	lastFiltersLinked = filtersLinked;
+}
+
+void PluginProcessor::processChannel(float* audio, CircularBuffer* buffer,
+	DelayAmp* amps, Filter* filters)
+{
+	processDrySignal(audio, amps);
+	processLoopedSignal(audio, buffer, amps, filters);
+	pushBlockSamplesOntoBuffer(audio, buffer);
+
+	if (fadeOut && lastBlockFadeOut)
+	{
+		return;
+	}
+	
+	processWetSignal(audio, buffer, amps, filters);
+
+	if (fadeOut)
+	{
+		buffer->clear();
+		for (size_t i = 0;i < maxIntervals;i++)
+		{
+			filters[i].reset();
+		}
+	}
+}
+
+void PluginProcessor::processDrySignal(float* audio, DelayAmp* amps)
+{
+	float dryAmpStart = amps[0].getLastValue();
+	float dryAmpEnd = amps[0].getCurrentValue();
+	float dryAmpStep = (dryAmpEnd - dryAmpStart) / numSamples;
+	float dryAmp = dryAmpStart;
+
+	for (size_t i = 0;i < numSamples;i++)
+	{
+		dryAmp += dryAmpStep;
+		audio[i] *= dryAmp;
+	}
+}
+
+void PluginProcessor::processLoopedSignal(float* audio, CircularBuffer* buffer,
+	DelayAmp* amps, Filter* filters)
+{
+	if (!loop && !lastBlockLoop)
+	{
+		return;
+	}
+
+	size_t loopDelay = lastBlockDelay * lastBlockNumIntervals - numSamples;
+	buffer->applyGainToSamples(loopDelay, numSamples, lastBlockFalloff,
+		currentFalloff);
+	buffer->applyFilterToSamples(loopDelay, numSamples, &filters[0]);
+
+	float gainStart = lastBlockLoop ? 1 : 0;
+	float gainEnd = loop ? 1 : 0;
+	gainStart *= amps[0].getLastValue() * lastBlockWet;
+	gainEnd *= amps[0].getCurrentValue() * currentWet;
+
+	buffer->sumWithSamplesRamped(loopDelay, audio, numSamples, gainStart,
+		gainEnd);
+}
+
+void PluginProcessor::pushBlockSamplesOntoBuffer(float* audio,
+	CircularBuffer* buffer)
+{
+	memcpy(tempBuffer.data(), audio, numSamples * sizeof(float));
+
+	if (loop || lastBlockLoop)
+	{
+		size_t loopDelay = lastBlockDelay * lastBlockNumIntervals - numSamples;
+		float gainStart = lastBlockLoop ? 1 : 0;
+		float gainEnd = loop ? 1 : 0;
+		buffer->sumWithSamplesRamped(loopDelay, tempBuffer.data(), numSamples,
+			gainStart, gainEnd);
+	}
+
+	if (!lastBlockFadeOut)
+	{
+		buffer->addSamples(tempBuffer.data(), numSamples);
+	}
+	else if (!fadeOut)
+	{
+		buffer->addSamplesRamped(tempBuffer.data(), numSamples);
+	}
+}
+
+void PluginProcessor::processWetSignal(float* audio, CircularBuffer* buffer,
+	DelayAmp* amps, Filter* filters)
+{
+	memset(tempBuffer.data(), 0, tempBuffer.size() * sizeof(float));
+
+	for (size_t i = lastBlockNumIntervals - 1;i > 0;i--)
+	{
+		size_t delay = lastBlockDelay * i;
+		buffer->applyGainToSamples(delay, numSamples, lastBlockFalloff,
+			currentFalloff);
+		buffer->applyFilterToSamples(delay, numSamples, &filters[i]);
+
+		if (amps[i].hasNewValue())
+		{
+			float g1 = amps[i].getLastValue();
+			float g2 = amps[i].getCurrentValue();
+			buffer->sumWithSamplesRamped(delay, tempBuffer.data(), numSamples,
+				g1, g2);
+		}
+		else
+		{
+			float gain = amps[i].getCurrentValue();
+			buffer->sumWithSamples(delay, tempBuffer.data(), numSamples, gain);
+		}
+	}
+
+	float wet = lastBlockWet;
+	float wetStep = (currentWet - lastBlockWet) / numSamples;
+	float fade = 1;
+	float fadeStep = fadeOut ? (1.0f / numSamples) : 0;
+
+	for (size_t i = 0;i < numSamples;i++)
+	{
+		fade -= fadeStep;
+		wet += wetStep;
+		audio[i] += tempBuffer[i] * wet * fade;
+	}
+}
+
 void PluginProcessor::resetLeftAmps()
 {
 	for (size_t i = 0;i < maxIntervals;i++)
@@ -401,6 +446,7 @@ void PluginProcessor::copyLeftAmpsToRight()
 		juce::RangedAudioParameter* left = tree.getParameter(leftId);
 		std::string rightId = getIdForRightIntervalAmp((int) i);
 		juce::RangedAudioParameter* right = tree.getParameter(rightId);
+
 		right->beginChangeGesture();
 		right->setValueNotifyingHost(left->getValue());
 		right->endChangeGesture();
@@ -415,6 +461,7 @@ void PluginProcessor::copyRightAmpsToLeft()
 		juce::RangedAudioParameter* left = tree.getParameter(leftId);
 		std::string rightId = getIdForRightIntervalAmp((int) i);
 		juce::RangedAudioParameter* right = tree.getParameter(rightId);
+
 		left->beginChangeGesture();
 		left->setValueNotifyingHost(right->getValue());
 		left->endChangeGesture();
@@ -459,23 +506,6 @@ void PluginProcessor::unlinkDelays()
 	}
 }
 
-void PluginProcessor::notifyHostOfStateChange()
-{
-	updateHostDisplay(ChangeDetails().withParameterInfoChanged(true));
-}
-
-// === Factory Functions ======================================================
-juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter()
-{
-	return new PluginProcessor();
-}
-
-juce::AudioProcessorEditor *PluginProcessor::createEditor()
-{
-	return new PluginEditor(*this);
-}
-
-// === State ==================================================================
 void PluginProcessor::getStateInformation(juce::MemoryBlock &destData)
 {
 	auto state = tree.copyState();
@@ -493,30 +523,42 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes)
 	}
 }
 
-float PluginProcessor::getSecondsForNoteValue(int index)
+void PluginProcessor::notifyHostOfStateChange()
 {
-	if (index >= (int) numNoteValues || index < 0 || lastBpm < 0)
-		return 0;
-	return (noteValues[index].proportion / (float) lastBpm) * 240;
+	updateHostDisplay(ChangeDetails().withParameterInfoChanged(true));
 }
 
-// === Private Helper =========================================================
+juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter()
+{
+	return new PluginProcessor();
+}
+
+juce::AudioProcessorEditor *PluginProcessor::createEditor()
+{
+	return new PluginEditor(*this);
+}
+
 size_t PluginProcessor::getDelaySamples()
 {
+	size_t result;
+
 	if (*tree.getRawParameterValue("tempo-sync") >= 1)
 	{
 		float noteIndex = *tree.getRawParameterValue("delay-time-sync");
 		float sec = getSecondsForNoteValue((int) noteIndex);
-		return (size_t) (lastSampleRate * sec);
+		result = static_cast<size_t>(lastSampleRate * sec);
 	}
 	else
 	{
 		float ms = *tree.getRawParameterValue("delay-time");
-		return (size_t) (lastSampleRate * ms / 1000);
+		result = static_cast<size_t>(lastSampleRate * ms / 1000);
 	}
+	
+	size_t limit = static_cast<size_t>((maxDelayTime / 1000) * lastSampleRate);
+	return juce::jmin(result, limit);
 }
 
 size_t PluginProcessor::getCurrentNumIntervals()
 {
-	return (size_t) *tree.getRawParameterValue("num-intervals");
+	return static_cast<size_t>(*tree.getRawParameterValue("num-intervals"));
 }
