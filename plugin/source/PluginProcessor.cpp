@@ -351,7 +351,13 @@ void PluginProcessor::processBlock
 		}
 		// clear buffer if the delay time has changed
 		if (fadeOut)
+		{
 			delayBuf->clear();
+			for (size_t i = 0;i < maxIntervals;i++)
+			{
+				filters[i].reset();
+			}
+		}
 	}
 	// save parameters to compare with next block
 	lastDelay = curDelay;
