@@ -168,10 +168,9 @@ private:
 
     void processChannel(float* audio, CircularBuffer* buffer, DelayAmp* amps,
         Filter* filters);
-    void processDrySignal(float* audio, DelayAmp* amps);
+    void processDrySignal(float* audio, float ampStart, float ampEnd);
     void processLoopedSignal(float* audio, CircularBuffer* buffer,
-        DelayAmp* amps, Filter* filters);
-    void pushBlockSamplesOntoBuffer(float* audio, CircularBuffer* buffer);
+        float ampStart, float ampEnd, Filter* filters);
     void processWetSignal(float* audio, CircularBuffer* buffer, DelayAmp* amps,
         Filter* filters);
 
