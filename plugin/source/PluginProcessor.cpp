@@ -151,6 +151,7 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 	}
 
 #if !JucePlugin_IsSynth
+	// Check if the input matches the output
 	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 	{
 		return false;
@@ -191,20 +192,21 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 	tempBuffer.resize((size_t) samplesPerBlock, 0.0f);
 		
 	lastSampleRate = sampleRate;
-	updateParametersOnReset();
 
 	lastAmpsLinked = *tree.getRawParameterValue("delays-linked") >= 1;
 	lastFiltersLinked = *tree.getRawParameterValue("filters-linked") >= 1;
+
+	updateParametersOnReset();
 }
 
 void PluginProcessor::releaseResources() { }
 
 void PluginProcessor::processBlock
-(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages)
 {
 	TRACE_DSP();
-	juce::ignoreUnused(midiMessages);
-	
+	juce::ignoreUnused(midiMessages); // not a midi plugin
+
 	int numInputChannels = getTotalNumInputChannels();
 	int numOutputChannels = getTotalNumOutputChannels();
 	for (int i = numInputChannels;i < numOutputChannels;i++)
@@ -212,7 +214,7 @@ void PluginProcessor::processBlock
 		buffer.clear(i, 0, buffer.getNumSamples());
 	}
 	
-	numSamples = static_cast<size_t>(buffer.getNumSamples());
+	numSamples = static_cast<size_t>(buffer.getNumSamples());	
 	
 	handleTempoSync();
 	handleParameterLinking();
@@ -222,38 +224,7 @@ void PluginProcessor::processBlock
 	processChannel(leftAudio, &leftBuffer, leftAmps, leftFilters);
 	float* rightAudio = buffer.getWritePointer(1);
 	processChannel(rightAudio, &rightBuffer, rightAmps, rightFilters);
-
-	updateLastBlockParameters();
-}
-
-void PluginProcessor::updateCurrentBlockParameters()
-{
-	currentDelay = getDelaySamples();
-	currentNumIntervals = getCurrentNumIntervals();
-
-	bool delayChanged = currentDelay != lastBlockDelay;
-	bool intervalsChanged = currentNumIntervals != lastBlockNumIntervals;
-	fadeOut = delayChanged || intervalsChanged;
-
-	currentWet = *tree.getRawParameterValue("wet") / 100;
-	currentFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
-	loop = *tree.getRawParameterValue("loop") >= 1;
-}
-
-void PluginProcessor::updateLastBlockParameters()
-{
-	lastBlockDelay = currentDelay;
-	lastBlockNumIntervals = currentNumIntervals;
-	lastBlockFadeOut = fadeOut;
-	lastBlockWet = currentWet;
-	lastBlockFalloff = currentFalloff;
-	lastBlockLoop = loop;
-}
-
-void PluginProcessor::updateParametersOnReset()
-{
-	updateCurrentBlockParameters();
-	fadeOut = false;
+	
 	updateLastBlockParameters();
 }
 
@@ -291,18 +262,60 @@ void PluginProcessor::handleParameterLinking()
 	lastFiltersLinked = filtersLinked;
 }
 
+void PluginProcessor::updateCurrentBlockParameters()
+{
+	currentDelay = getDelaySamples();
+	currentNumIntervals = getCurrentNumIntervals();
+
+	bool delayChanged = currentDelay != lastBlockDelay;
+	bool intervalsChanged = currentNumIntervals != lastBlockNumIntervals;
+	fadeOut = delayChanged || intervalsChanged;
+
+	currentWet = *tree.getRawParameterValue("wet") / 100;
+	currentFalloff = 1 - (*tree.getRawParameterValue("falloff") / 100);
+	loop = *tree.getRawParameterValue("loop") >= 1;
+}
+
+void PluginProcessor::updateLastBlockParameters()
+{
+	lastBlockDelay = currentDelay;
+	lastBlockNumIntervals = currentNumIntervals;
+	lastBlockFadeOut = fadeOut;
+	lastBlockWet = currentWet;
+	lastBlockFalloff = currentFalloff;
+	lastBlockLoop = loop;
+}
+
+void PluginProcessor::updateParametersOnReset()
+{
+	updateCurrentBlockParameters();
+	fadeOut = false;
+	updateLastBlockParameters();
+}
+
 void PluginProcessor::processChannel(float* audio, CircularBuffer* buffer,
 	DelayAmp* amps, Filter* filters)
 {
-	processDrySignal(audio, amps);
-	processLoopedSignal(audio, buffer, amps, filters);
-	pushBlockSamplesOntoBuffer(audio, buffer);
+	memcpy(tempBuffer.data(), audio, numSamples * sizeof(float));
 
-	if (fadeOut && lastBlockFadeOut)
+	float dryAmpStart = amps[0].getLastValue();
+	float dryAmpEnd = amps[0].getCurrentValue();
+	processDrySignal(audio, dryAmpStart, dryAmpEnd);
+	processLoopedSignal(audio, buffer, dryAmpStart, dryAmpEnd, filters);
+
+	if (!lastBlockFadeOut)
+	{
+		buffer->addSamples(tempBuffer.data(), numSamples);
+	}
+	else if (!fadeOut)
+	{
+		buffer->addSamplesRamped(tempBuffer.data(), numSamples);
+	}
+	else
 	{
 		return;
 	}
-	
+
 	processWetSignal(audio, buffer, amps, filters);
 
 	if (fadeOut)
@@ -315,22 +328,20 @@ void PluginProcessor::processChannel(float* audio, CircularBuffer* buffer,
 	}
 }
 
-void PluginProcessor::processDrySignal(float* audio, DelayAmp* amps)
-{
-	float dryAmpStart = amps[0].getLastValue();
-	float dryAmpEnd = amps[0].getCurrentValue();
-	float dryAmpStep = (dryAmpEnd - dryAmpStart) / numSamples;
-	float dryAmp = dryAmpStart;
 
+void PluginProcessor::processDrySignal(float* audio, float ampStart,
+	float ampEnd)
+{
+	float step = (ampEnd - ampStart) / numSamples;
 	for (size_t i = 0;i < numSamples;i++)
 	{
-		dryAmp += dryAmpStep;
-		audio[i] *= dryAmp;
+		ampStart += step;
+		audio[i] *= ampStart;
 	}
 }
 
 void PluginProcessor::processLoopedSignal(float* audio, CircularBuffer* buffer,
-	DelayAmp* amps, Filter* filters)
+	float ampStart, float ampEnd, Filter* filters)
 {
 	if (!loop && !lastBlockLoop)
 	{
@@ -342,37 +353,15 @@ void PluginProcessor::processLoopedSignal(float* audio, CircularBuffer* buffer,
 		currentFalloff);
 	buffer->applyFilterToSamples(loopDelay, numSamples, &filters[0]);
 
-	float gainStart = lastBlockLoop ? 1 : 0;
-	float gainEnd = loop ? 1 : 0;
-	gainStart *= amps[0].getLastValue() * lastBlockWet;
-	gainEnd *= amps[0].getCurrentValue() * currentWet;
+	float feedbackStart = lastBlockLoop ? 1 : 0;
+	float feedbackEnd = loop ? 1 : 0;
+	buffer->sumWithSamplesRamped(loopDelay, tempBuffer.data(), numSamples,
+		feedbackStart, feedbackEnd);
 
-	buffer->sumWithSamplesRamped(loopDelay, audio, numSamples, gainStart,
-		gainEnd);
-}
-
-void PluginProcessor::pushBlockSamplesOntoBuffer(float* audio,
-	CircularBuffer* buffer)
-{
-	memcpy(tempBuffer.data(), audio, numSamples * sizeof(float));
-
-	if (loop || lastBlockLoop)
-	{
-		size_t loopDelay = lastBlockDelay * lastBlockNumIntervals - numSamples;
-		float gainStart = lastBlockLoop ? 1 : 0;
-		float gainEnd = loop ? 1 : 0;
-		buffer->sumWithSamplesRamped(loopDelay, tempBuffer.data(), numSamples,
-			gainStart, gainEnd);
-	}
-
-	if (!lastBlockFadeOut)
-	{
-		buffer->addSamples(tempBuffer.data(), numSamples);
-	}
-	else if (!fadeOut)
-	{
-		buffer->addSamplesRamped(tempBuffer.data(), numSamples);
-	}
+	feedbackStart *= lastBlockWet * ampStart;
+	feedbackEnd *= currentWet * ampEnd;
+	buffer->sumWithSamplesRamped(loopDelay, audio, numSamples, feedbackStart,
+		feedbackEnd);
 }
 
 void PluginProcessor::processWetSignal(float* audio, CircularBuffer* buffer,
@@ -382,23 +371,15 @@ void PluginProcessor::processWetSignal(float* audio, CircularBuffer* buffer,
 
 	for (size_t i = lastBlockNumIntervals - 1;i > 0;i--)
 	{
-		size_t delay = lastBlockDelay * i;
-		buffer->applyGainToSamples(delay, numSamples, lastBlockFalloff,
+		size_t intervalDelay = lastBlockDelay * i;
+		buffer->applyGainToSamples(intervalDelay, numSamples, lastBlockFalloff,
 			currentFalloff);
-		buffer->applyFilterToSamples(delay, numSamples, &filters[i]);
+		buffer->applyFilterToSamples(intervalDelay, numSamples, &filters[i]);
 
-		if (amps[i].hasNewValue())
-		{
-			float g1 = amps[i].getLastValue();
-			float g2 = amps[i].getCurrentValue();
-			buffer->sumWithSamplesRamped(delay, tempBuffer.data(), numSamples,
-				g1, g2);
-		}
-		else
-		{
-			float gain = amps[i].getCurrentValue();
-			buffer->sumWithSamples(delay, tempBuffer.data(), numSamples, gain);
-		}
+		float g1 = amps[i].getLastValue();
+		float g2 = amps[i].getCurrentValue();
+		buffer->sumWithSamplesRamped(intervalDelay, tempBuffer.data(),
+			numSamples, g1, g2);
 	}
 
 	float wet = lastBlockWet;
