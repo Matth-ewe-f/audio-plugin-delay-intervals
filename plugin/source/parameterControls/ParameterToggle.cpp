@@ -29,7 +29,7 @@ void ParameterToggle::attachToParameter
         treeState->removeParameterListener(parameterName, this);
     }
 
-    newState->addParameterListener(parameterName, this);
+    newState->addParameterListener(newParam, this);
     attachment.reset(new ButtonAttachment(*newState, newParam, toggle));
     treeState = newState;
     parameterName = newParam;
